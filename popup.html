@@ -833,6 +833,75 @@
     .status-inactive {
       background-color: #f44336;
     }
+
+    /* 排序设置样式 */
+    .sorting-settings-container {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin-bottom: 15px;
+      padding: 15px;
+    }
+
+    .sorting-settings {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .sorting-section {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .sorting-section h4 {
+      margin-top: 0;
+      margin-bottom: 10px;
+      color: #333;
+      font-size: 14px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 5px;
+    }
+
+    .sorting-option {
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+    }
+
+    .sorting-option label {
+      margin-right: 10px;
+      font-size: 13px;
+      min-width: 70px;
+    }
+
+    .sorting-option select {
+      flex: 1;
+      padding: 5px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background-color: white;
+    }
+
+    .sort-order-button {
+      display: flex;
+      align-items: center;
+      background-color: #f5f5f5;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 5px 10px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .sort-order-button:hover {
+      background-color: #e9e9e9;
+    }
+
+    .sort-order-button span:first-child {
+      margin-right: 5px;
+      font-size: 14px;
+    }
   </style>
 </head>
 <body>
@@ -927,6 +996,53 @@
     </div>
 
     <div class="tab-content" id="metrics-tab">
+      <div class="sorting-settings-container">
+        <h3 class="metrics-title">
+          <i>⚙️</i>
+          <span>排序设置</span>
+        </h3>
+
+        <div class="sorting-settings">
+          <div class="sorting-section">
+            <h4>标签组排序</h4>
+            <div class="sorting-option">
+              <label>排序方法:</label>
+              <select id="groupSortingMethod">
+                <option value="title">按标题</option>
+                <option value="size">按大小</option>
+                <option value="smart" selected>智能排序</option>
+              </select>
+            </div>
+            <div class="sorting-option">
+              <label>排序顺序:</label>
+              <button id="groupSortOrder" class="sort-order-button">
+                <span id="groupSortOrderIcon">↑</span>
+                <span id="groupSortOrderText">升序</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="sorting-section">
+            <h4>组内标签排序</h4>
+            <div class="sorting-option">
+              <label>排序方法:</label>
+              <select id="tabSortingMethod">
+                <option value="title">按标题</option>
+                <option value="domain" selected>按域名</option>
+                <option value="smart">智能排序</option>
+              </select>
+            </div>
+            <div class="sorting-option">
+              <label>排序顺序:</label>
+              <button id="tabSortOrder" class="sort-order-button">
+                <span id="tabSortOrderIcon">↑</span>
+                <span id="tabSortOrderText">升序</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div id="sortingMetricsContainer" class="sorting-metrics-container">
         <h3 class="metrics-title">
           <i>📊</i>

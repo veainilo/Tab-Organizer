@@ -1043,15 +1043,46 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     console.log('处理 updateSortingMethod 消息');
 
     if (message.method !== undefined) {
-      settings.groupSortingMethod = message.method;
+      // 检查是标签组排序方法还是标签排序方法
+      if (message.target === 'tabs') {
+        settings.sortingMethod = message.method;
+        console.log('标签排序方法已更新为:', settings.sortingMethod);
 
-      // 如果更新了排序方法，自动执行一次排序
-      if (settings.extensionActive && settings.enableGroupSorting) {
-        sortTabGroups().then(() => {
-          console.log('排序方法已更新，已重新排序标签组');
-        }).catch(error => {
-          console.error('排序标签组失败:', error);
-        });
+        // 保存设置
+        saveSettings();
+
+        // 如果更新了排序方法，自动执行一次标签排序
+        if (settings.extensionActive && settings.enableTabSorting) {
+          // 获取所有标签组
+          chrome.tabGroups.query({ windowId: WINDOW_ID_CURRENT }).then(groups => {
+            // 对每个标签组内的标签进行排序
+            for (const group of groups) {
+              sortTabsInGroup(group.id).then(success => {
+                console.log(`标签组 ${group.id} 内的标签排序结果:`, success ? '成功' : '失败');
+              }).catch(error => {
+                console.error(`标签组 ${group.id} 内的标签排序失败:`, error);
+              });
+            }
+          }).catch(error => {
+            console.error('获取标签组失败:', error);
+          });
+        }
+      } else {
+        // 默认更新标签组排序方法
+        settings.groupSortingMethod = message.method;
+        console.log('标签组排序方法已更新为:', settings.groupSortingMethod);
+
+        // 保存设置
+        saveSettings();
+
+        // 如果更新了排序方法，自动执行一次排序
+        if (settings.extensionActive && settings.enableGroupSorting) {
+          sortTabGroups().then(() => {
+            console.log('排序方法已更新，已重新排序标签组');
+          }).catch(error => {
+            console.error('排序标签组失败:', error);
+          });
+        }
       }
     }
 
@@ -1066,23 +1097,63 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.action === 'toggleSortOrder') {
     console.log('处理 toggleSortOrder 消息');
 
-    // 切换排序顺序
-    settings.groupSortAscending = !settings.groupSortAscending;
+    // 检查是标签组排序顺序还是标签排序顺序
+    if (message.target === 'tabs') {
+      // 切换标签排序顺序
+      settings.sortAscending = !settings.sortAscending;
+      console.log('标签排序顺序已切换为:', settings.sortAscending ? '升序' : '降序');
 
-    // 如果切换了排序顺序，自动执行一次排序
-    if (settings.extensionActive && settings.enableGroupSorting) {
-      sortTabGroups().then(() => {
-        console.log('排序顺序已切换，已重新排序标签组');
-      }).catch(error => {
-        console.error('排序标签组失败:', error);
+      // 保存设置
+      saveSettings();
+
+      // 如果切换了排序顺序，自动执行一次标签排序
+      if (settings.extensionActive && settings.enableTabSorting) {
+        // 获取所有标签组
+        chrome.tabGroups.query({ windowId: WINDOW_ID_CURRENT }).then(groups => {
+          // 对每个标签组内的标签进行排序
+          for (const group of groups) {
+            sortTabsInGroup(group.id).then(success => {
+              console.log(`标签组 ${group.id} 内的标签排序结果:`, success ? '成功' : '失败');
+            }).catch(error => {
+              console.error(`标签组 ${group.id} 内的标签排序失败:`, error);
+            });
+          }
+        }).catch(error => {
+          console.error('获取标签组失败:', error);
+        });
+      }
+
+      sendResponse({
+        success: true,
+        settings: settings,
+        sortAscending: settings.sortAscending,
+        target: 'tabs'
+      });
+    } else {
+      // 切换标签组排序顺序
+      settings.groupSortAscending = !settings.groupSortAscending;
+      console.log('标签组排序顺序已切换为:', settings.groupSortAscending ? '升序' : '降序');
+
+      // 保存设置
+      saveSettings();
+
+      // 如果切换了排序顺序，自动执行一次排序
+      if (settings.extensionActive && settings.enableGroupSorting) {
+        sortTabGroups().then(() => {
+          console.log('排序顺序已切换，已重新排序标签组');
+        }).catch(error => {
+          console.error('排序标签组失败:', error);
+        });
+      }
+
+      sendResponse({
+        success: true,
+        settings: settings,
+        sortAscending: settings.groupSortAscending,
+        target: 'groups'
       });
     }
 
-    sendResponse({
-      success: true,
-      settings: settings,
-      sortAscending: settings.groupSortAscending
-    });
     return true;
   }
 

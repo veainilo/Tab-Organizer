@@ -44,6 +44,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const monitoringInterval = document.getElementById('monitoringInterval');
   const monitoringCountdown = document.getElementById('monitoringCountdown');
 
+  // 排序设置相关元素
+  const groupSortingMethod = document.getElementById('groupSortingMethod');
+  const groupSortOrder = document.getElementById('groupSortOrder');
+  const groupSortOrderIcon = document.getElementById('groupSortOrderIcon');
+  const groupSortOrderText = document.getElementById('groupSortOrderText');
+  const tabSortingMethod = document.getElementById('tabSortingMethod');
+  const tabSortOrder = document.getElementById('tabSortOrder');
+  const tabSortOrderIcon = document.getElementById('tabSortOrderIcon');
+  const tabSortOrderText = document.getElementById('tabSortOrderText');
+
   // 倒计时相关变量
   let countdownInterval = null;
   let nextExecutionTime = 0;
@@ -305,9 +315,118 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // 初始化排序设置
+  function initSortingSettings() {
+    // 获取当前设置
+    chrome.runtime.sendMessage({ action: 'getExtensionStatus' }, (response) => {
+      if (response && response.success && response.settings) {
+        const settings = response.settings;
+
+        // 设置标签组排序方法
+        if (settings.groupSortingMethod) {
+          groupSortingMethod.value = settings.groupSortingMethod;
+        }
+
+        // 设置标签组排序顺序
+        updateSortOrderButton(groupSortOrderIcon, groupSortOrderText, settings.groupSortAscending);
+
+        // 设置标签排序方法
+        if (settings.sortingMethod) {
+          tabSortingMethod.value = settings.sortingMethod;
+        }
+
+        // 设置标签排序顺序
+        updateSortOrderButton(tabSortOrderIcon, tabSortOrderText, settings.sortAscending);
+      }
+    });
+
+    // 添加标签组排序方法变更事件
+    groupSortingMethod.addEventListener('change', () => {
+      const method = groupSortingMethod.value;
+      console.log('标签组排序方法变更为:', method);
+
+      chrome.runtime.sendMessage({
+        action: 'updateSortingMethod',
+        method: method,
+        target: 'groups'
+      }, (response) => {
+        if (response && response.success) {
+          showStatus('标签组排序方法已更新', 'success');
+          // 重新加载排序指标
+          loadSortingMetrics();
+        } else {
+          showStatus('更新标签组排序方法失败', 'error');
+        }
+      });
+    });
+
+    // 添加标签组排序顺序变更事件
+    groupSortOrder.addEventListener('click', () => {
+      chrome.runtime.sendMessage({
+        action: 'toggleSortOrder',
+        target: 'groups'
+      }, (response) => {
+        if (response && response.success) {
+          const ascending = response.sortAscending;
+          updateSortOrderButton(groupSortOrderIcon, groupSortOrderText, ascending);
+          showStatus('标签组排序顺序已更新', 'success');
+          // 重新加载排序指标
+          loadSortingMetrics();
+        } else {
+          showStatus('更新标签组排序顺序失败', 'error');
+        }
+      });
+    });
+
+    // 添加标签排序方法变更事件
+    tabSortingMethod.addEventListener('change', () => {
+      const method = tabSortingMethod.value;
+      console.log('标签排序方法变更为:', method);
+
+      chrome.runtime.sendMessage({
+        action: 'updateSortingMethod',
+        method: method,
+        target: 'tabs'
+      }, (response) => {
+        if (response && response.success) {
+          showStatus('标签排序方法已更新', 'success');
+          // 重新加载排序指标
+          loadSortingMetrics();
+        } else {
+          showStatus('更新标签排序方法失败', 'error');
+        }
+      });
+    });
+
+    // 添加标签排序顺序变更事件
+    tabSortOrder.addEventListener('click', () => {
+      chrome.runtime.sendMessage({
+        action: 'toggleSortOrder',
+        target: 'tabs'
+      }, (response) => {
+        if (response && response.success) {
+          const ascending = response.sortAscending;
+          updateSortOrderButton(tabSortOrderIcon, tabSortOrderText, ascending);
+          showStatus('标签排序顺序已更新', 'success');
+          // 重新加载排序指标
+          loadSortingMetrics();
+        } else {
+          showStatus('更新标签排序顺序失败', 'error');
+        }
+      });
+    });
+  }
+
+  // 更新排序顺序按钮
+  function updateSortOrderButton(iconElement, textElement, ascending) {
+    iconElement.textContent = ascending ? '↑' : '↓';
+    textElement.textContent = ascending ? '升序' : '降序';
+  }
+
   // Load current tab groups and sorting metrics
   loadTabGroups();
   loadSortingMetrics();
+  initSortingSettings();
 
   // 定期更新倒计时
   setInterval(() => {
@@ -399,16 +518,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 对每个组进行排序
         for (const group of groups) {
-          console.log('正在对标签组排序:', group);
+          console.log('正在对标签组内的标签排序:', group);
           const response = await chrome.runtime.sendMessage({
-            action: 'sortTabGroup',
+            action: 'sortTabsInGroup',
             groupId: group.id
           });
-          console.log('sortTabGroup 响应:', response);
+          console.log('sortTabsInGroup 响应:', response);
         }
 
-        showStatus(getMessage('tabsSorted'), 'success');
+        // 获取当前的排序方法和顺序
+        const sortMethod = tabSortingMethod.options[tabSortingMethod.selectedIndex].text;
+        const sortOrder = tabSortOrderText.textContent;
+
+        showStatus(`所有标签组内的标签已按${sortMethod}${sortOrder}排序`, 'success');
         loadTabGroups();
+        loadSortingMetrics();
       } catch (error) {
         console.error('排序标签页失败:', error);
         showStatus(getMessage('errorSortingTabs', [error.message || 'Unknown error']), 'error');

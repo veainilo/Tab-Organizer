@@ -1039,8 +1039,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 });
 
 // 定时器ID
-let autoGroupTimerId = null;
-let autoSortTimerId = null;
+let autoGroupTimerId = null; // 用于自动监控的定时器ID
 
 // 启动持续监控
 function startContinuousMonitoring() {
@@ -1054,34 +1053,44 @@ function startContinuousMonitoring() {
   // 停止现有的定时器（如果有）
   stopContinuousMonitoring();
 
-  // 启动自动分组定时器
+  // 启动综合监控定时器（包含分组、标签组排序和组内标签排序）
   if (settings.continuousMonitoring && settings.autoGroupInterval > 0) {
     autoGroupTimerId = setInterval(async () => {
       if (settings.extensionActive && !manualUngrouping) {
-        console.log('执行自动分组');
+        console.log('执行自动监控任务');
         try {
-          await groupTabsByDomain();
+          // 1. 首先对标签进行分组
+          if (settings.autoGroupByDomain) {
+            console.log('执行自动分组');
+            await groupTabsByDomain();
+          }
+
+          // 2. 然后对标签组进行排序
+          if (settings.enableGroupSorting) {
+            console.log('执行自动标签组排序');
+            await sortTabGroups();
+          }
+
+          // 3. 最后对每个标签组内的标签进行排序
+          if (settings.enableTabSorting) {
+            console.log('执行自动标签组内标签排序');
+
+            // 获取所有标签组
+            const groups = await chrome.tabGroups.query({ windowId: WINDOW_ID_CURRENT });
+
+            // 对每个标签组内的标签进行排序
+            for (const group of groups) {
+              await sortTabsInGroup(group.id);
+            }
+          }
+
+          console.log('自动监控任务完成');
         } catch (error) {
-          console.error('自动分组出错:', error);
+          console.error('自动监控任务出错:', error);
         }
       }
     }, settings.autoGroupInterval);
-    console.log('自动分组定时器已启动，间隔:', settings.autoGroupInterval, 'ms');
-  }
-
-  // 启动自动排序定时器
-  if (settings.continuousMonitoring && settings.autoSortInterval > 0 && settings.enableGroupSorting) {
-    autoSortTimerId = setInterval(async () => {
-      if (settings.extensionActive && !manualUngrouping) {
-        console.log('执行自动排序');
-        try {
-          await sortTabGroups();
-        } catch (error) {
-          console.error('自动排序出错:', error);
-        }
-      }
-    }, settings.autoSortInterval);
-    console.log('自动排序定时器已启动，间隔:', settings.autoSortInterval, 'ms');
+    console.log('自动监控定时器已启动，间隔:', settings.autoGroupInterval, 'ms');
   }
 }
 
@@ -1089,18 +1098,11 @@ function startContinuousMonitoring() {
 function stopContinuousMonitoring() {
   console.log('停止持续监控');
 
-  // 清除自动分组定时器
+  // 清除自动监控定时器
   if (autoGroupTimerId) {
     clearInterval(autoGroupTimerId);
     autoGroupTimerId = null;
-    console.log('自动分组定时器已停止');
-  }
-
-  // 清除自动排序定时器
-  if (autoSortTimerId) {
-    clearInterval(autoSortTimerId);
-    autoSortTimerId = null;
-    console.log('自动排序定时器已停止');
+    console.log('自动监控定时器已停止');
   }
 }
 

@@ -13,6 +13,16 @@ let settings = {
   groupByRootDomain: true,  // 按根域名分组
   ignoreTLD: true,          // 忽略顶级域名（如.com, .org等）
   useDynamicColors: true,   // 动态分配颜色
+  enableTabSorting: true,   // 启用标签排序
+  sortingMethod: 'domain',  // 排序方法
+  sortAscending: true,      // 升序排序
+  enableGroupSorting: true, // 启用标签组排序
+  groupSortingMethod: 'title', // 标签组排序方法
+  groupSortAscending: true, // 标签组升序排序
+  sortOnGroupCreated: true,  // 创建标签组时排序
+  sortOnGroupUpdated: true,  // 更新标签组时排序
+  sortOnTabGroupChanged: true, // 标签页组状态变化时排序
+  sortOnTabMoved: false,     // 标签页移动时排序
   excludeDomains: [],
   colorScheme: {
     'default': 'blue'
@@ -883,17 +893,59 @@ chrome.tabGroups.onUpdated.addListener(async (group) => {
     await sortTabsInGroup(group.id);
   }
 
-  // 如果启用了标签组排序，对窗口中的标签组进行排序
-  if (settings.enableGroupSorting) {
+  // 如果启用了标签组排序且设置了在更新时排序，对窗口中的标签组进行排序
+  if (settings.enableGroupSorting && settings.sortOnGroupUpdated) {
     await sortTabGroups(group.windowId);
   }
 });
 
 // 监听标签组创建事件
-chrome.tabGroups.onCreated.addListener((group) => {
+chrome.tabGroups.onCreated.addListener(async (group) => {
   // 记录标签组创建时间
   groupCreateTimes[group.id] = Date.now();
   groupLastAccessTimes[group.id] = Date.now();
+
+  // 如果启用了标签组排序且设置了在创建时排序，对窗口中的标签组进行排序
+  if (settings.enableGroupSorting && settings.sortOnGroupCreated) {
+    // 稍微延迟一下，确保标签组已完全创建
+    setTimeout(async () => {
+      await sortTabGroups(group.windowId);
+    }, 100);
+  }
+});
+
+// 监听标签页组状态变化事件
+chrome.tabs.onGroupChanged.addListener(async (tabId, details) => {
+  // 更新标签组最后访问时间
+  if (details.groupId !== TAB_GROUP_ID_NONE) {
+    groupLastAccessTimes[details.groupId] = Date.now();
+  }
+
+  // 如果启用了标签组排序且设置了在标签页组状态变化时排序，对窗口中的标签组进行排序
+  if (settings.enableGroupSorting && settings.sortOnTabGroupChanged) {
+    // 稍微延迟一下，确保标签组状态已更新
+    setTimeout(async () => {
+      const tab = await chrome.tabs.get(tabId);
+      await sortTabGroups(tab.windowId);
+    }, 100);
+  }
+});
+
+// 监听标签页移动事件
+chrome.tabs.onMoved.addListener(async (tabId, _moveInfo) => {
+  // 获取标签页信息
+  const tab = await chrome.tabs.get(tabId);
+
+  // 如果标签页属于某个组，并且启用了标签组排序，且设置了在标签页移动时排序
+  if (tab.groupId !== TAB_GROUP_ID_NONE && settings.enableGroupSorting && settings.sortOnTabMoved) {
+    // 更新标签组最后访问时间
+    groupLastAccessTimes[tab.groupId] = Date.now();
+
+    // 稍微延迟一下，确保标签页移动已完成
+    setTimeout(async () => {
+      await sortTabGroups(tab.windowId);
+    }, 200);
+  }
 });
 
 // Listen for messages from popup or options page

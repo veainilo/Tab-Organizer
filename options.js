@@ -34,6 +34,10 @@ let sortAscendingCheckbox;
 let enableGroupSortingCheckbox;
 let groupSortingMethodSelect;
 let groupSortAscendingCheckbox;
+let sortOnGroupCreatedCheckbox;
+let sortOnGroupUpdatedCheckbox;
+let sortOnTabGroupChangedCheckbox;
+let sortOnTabMovedCheckbox;
 let domainListElement;
 let noDomainsElement;
 let newDomainInput;
@@ -75,6 +79,10 @@ document.addEventListener('DOMContentLoaded', () => {
   enableGroupSortingCheckbox = document.getElementById('enableGroupSorting');
   groupSortingMethodSelect = document.getElementById('groupSortingMethod');
   groupSortAscendingCheckbox = document.getElementById('groupSortAscending');
+  sortOnGroupCreatedCheckbox = document.getElementById('sortOnGroupCreated');
+  sortOnGroupUpdatedCheckbox = document.getElementById('sortOnGroupUpdated');
+  sortOnTabGroupChangedCheckbox = document.getElementById('sortOnTabGroupChanged');
+  sortOnTabMovedCheckbox = document.getElementById('sortOnTabMoved');
   domainListElement = document.getElementById('domainList');
   noDomainsElement = document.getElementById('noDomains');
   newDomainInput = document.getElementById('newDomain');
@@ -92,6 +100,12 @@ document.addEventListener('DOMContentLoaded', () => {
   addDomainButton.addEventListener('click', addExcludedDomain);
   addColorMappingButton.addEventListener('click', addColorMapping);
   saveSettingsButton.addEventListener('click', saveSettings);
+
+  // Add event listener to show/hide group sorting triggers
+  enableGroupSortingCheckbox.addEventListener('change', function() {
+    document.getElementById('groupSortingTriggersContainer').style.display =
+      this.checked ? 'block' : 'none';
+  });
 
   // Handle Enter key in domain input
   newDomainInput.addEventListener('keypress', (e) => {
@@ -131,6 +145,16 @@ function updateUI() {
   enableGroupSortingCheckbox.checked = settings.enableGroupSorting;
   groupSortingMethodSelect.value = settings.groupSortingMethod;
   groupSortAscendingCheckbox.checked = settings.groupSortAscending;
+
+  // Update group sorting trigger options
+  sortOnGroupCreatedCheckbox.checked = settings.sortOnGroupCreated;
+  sortOnGroupUpdatedCheckbox.checked = settings.sortOnGroupUpdated;
+  sortOnTabGroupChangedCheckbox.checked = settings.sortOnTabGroupChanged;
+  sortOnTabMovedCheckbox.checked = settings.sortOnTabMoved;
+
+  // Show/hide group sorting triggers based on whether group sorting is enabled
+  document.getElementById('groupSortingTriggersContainer').style.display =
+    settings.enableGroupSorting ? 'block' : 'none';
 
   // Update excluded domains list
   updateDomainList();
@@ -296,6 +320,12 @@ function saveSettings() {
   settings.enableGroupSorting = enableGroupSortingCheckbox.checked;
   settings.groupSortingMethod = groupSortingMethodSelect.value;
   settings.groupSortAscending = groupSortAscendingCheckbox.checked;
+
+  // Get group sorting trigger options
+  settings.sortOnGroupCreated = sortOnGroupCreatedCheckbox.checked;
+  settings.sortOnGroupUpdated = sortOnGroupUpdatedCheckbox.checked;
+  settings.sortOnTabGroupChanged = sortOnTabGroupChangedCheckbox.checked;
+  settings.sortOnTabMoved = sortOnTabMovedCheckbox.checked;
 
   // Get default color
   settings.colorScheme['default'] = defaultColorSelect.value;

@@ -159,6 +159,16 @@
       background-color: #fde7e9;
       color: #a80000;
     }
+
+    .sub-option {
+      margin-left: 20px;
+      margin-bottom: 5px;
+    }
+
+    #groupSortingTriggersContainer p {
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
   </style>
 </head>
 <body>
@@ -240,6 +250,34 @@
         <input type="checkbox" id="enableGroupSorting">
         <span data-i18n="enableGroupSorting">Enable automatic tab group sorting</span>
       </label>
+    </div>
+
+    <div class="option" id="groupSortingTriggersContainer">
+      <p data-i18n="groupSortingTriggers">Sort tab groups when:</p>
+      <div class="sub-option">
+        <label>
+          <input type="checkbox" id="sortOnGroupCreated">
+          <span data-i18n="sortOnGroupCreated">A new tab group is created</span>
+        </label>
+      </div>
+      <div class="sub-option">
+        <label>
+          <input type="checkbox" id="sortOnGroupUpdated">
+          <span data-i18n="sortOnGroupUpdated">A tab group is updated (title, color)</span>
+        </label>
+      </div>
+      <div class="sub-option">
+        <label>
+          <input type="checkbox" id="sortOnTabGroupChanged">
+          <span data-i18n="sortOnTabGroupChanged">A tab is added to or removed from a group</span>
+        </label>
+      </div>
+      <div class="sub-option">
+        <label>
+          <input type="checkbox" id="sortOnTabMoved">
+          <span data-i18n="sortOnTabMoved">A tab is moved within a window</span>
+        </label>
+      </div>
     </div>
 
     <div class="option">

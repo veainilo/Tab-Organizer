@@ -37,6 +37,64 @@ document.addEventListener('DOMContentLoaded', () => {
   const noGroupsElement = document.getElementById('noGroups');
   const sortingMetricsContainer = document.getElementById('sortingMetricsContainer');
   const sortingMetricsElement = document.getElementById('sortingMetrics');
+  const extensionActiveToggle = document.getElementById('extensionActiveToggle');
+  const extensionActiveStatus = document.getElementById('extensionActiveStatus');
+
+  // 获取插件状态
+  chrome.runtime.sendMessage({ action: 'getExtensionStatus' }, (response) => {
+    console.log('getExtensionStatus 响应:', response);
+    if (response && response.success) {
+      // 设置开关状态
+      extensionActiveToggle.checked = response.active;
+      // 更新状态文本
+      updateExtensionActiveStatus(response.active);
+      // 根据插件状态启用或禁用取消分组按钮
+      updateUngroupButtonState(response.active);
+    }
+  });
+
+  // 添加开关事件监听器
+  extensionActiveToggle.addEventListener('change', () => {
+    const isActive = extensionActiveToggle.checked;
+    console.log('插件激活状态切换:', isActive);
+
+    chrome.runtime.sendMessage({
+      action: 'toggleExtensionActive',
+      active: isActive
+    }, (response) => {
+      console.log('toggleExtensionActive 响应:', response);
+      if (response && response.success) {
+        // 更新状态文本
+        updateExtensionActiveStatus(response.active);
+        // 根据插件状态启用或禁用取消分组按钮
+        updateUngroupButtonState(response.active);
+
+        // 如果激活了插件，自动刷新标签组列表
+        if (response.active) {
+          loadTabGroups();
+        }
+      }
+    });
+  });
+
+  // 更新插件激活状态文本
+  function updateExtensionActiveStatus(isActive) {
+    extensionActiveStatus.textContent = isActive ? '插件已激活' : '插件已停用';
+    extensionActiveStatus.style.color = isActive ? '#0078d7' : '#999';
+  }
+
+  // 根据插件状态启用或禁用取消分组按钮
+  function updateUngroupButtonState(isActive) {
+    if (isActive) {
+      ungroupAllButton.disabled = true;
+      ungroupAllButton.style.opacity = '0.5';
+      ungroupAllButton.title = '插件激活时不能取消分组';
+    } else {
+      ungroupAllButton.disabled = false;
+      ungroupAllButton.style.opacity = '1';
+      ungroupAllButton.title = '';
+    }
+  }
 
   // Load current tab groups and sorting metrics
   loadTabGroups();

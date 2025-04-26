@@ -10,8 +10,12 @@ function getMessage(messageName, substitutions) {
 const WINDOW_ID_CURRENT = chrome.windows.WINDOW_ID_CURRENT;
 const TAB_GROUP_ID_NONE = -1;
 
+// 标志，指示是否是用户手动取消分组
+let manualUngrouping = false;
+
 // 基本设置
 let settings = {
+  extensionActive: true,      // 插件激活开关
   autoGroupByDomain: true,
   autoGroupOnCreation: true,
   groupByRootDomain: true,
@@ -302,7 +306,17 @@ async function createOrUpdateTabGroup(tabIds, domain, existingGroupId = null) {
 // 取消所有标签页分组
 async function ungroupAllTabs() {
   console.log('开始取消所有标签页分组');
+
+  // 如果插件处于激活状态，不允许取消分组
+  if (settings.extensionActive) {
+    console.log('插件处于激活状态，不允许取消分组');
+    return { success: false, error: 'Extension is active, ungrouping is not allowed' };
+  }
+
   try {
+    // 设置标志，指示这是用户手动取消分组
+    manualUngrouping = true;
+
     const tabs = await chrome.tabs.query({ currentWindow: true });
     console.log('查询到的标签页:', tabs);
 
@@ -313,10 +327,18 @@ async function ungroupAllTabs() {
       }
     }
 
-    return true;
+    // 延迟重置标志，给取消分组操作留出时间
+    setTimeout(() => {
+      manualUngrouping = false;
+      console.log('重置手动取消分组标志');
+    }, 1000);
+
+    return { success: true };
   } catch (error) {
     console.error('Error ungrouping all tabs:', error);
-    return false;
+    // 出错时也要重置标志
+    manualUngrouping = false;
+    return { success: false, error: error.message };
   }
 }
 
@@ -682,9 +704,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   // 取消所有标签页分组
   if (message.action === 'ungroupAll') {
     console.log('处理 ungroupAll 消息');
-    ungroupAllTabs().then(success => {
-      console.log('ungroupAll 执行结果:', success);
-      sendResponse({ success });
+    ungroupAllTabs().then(response => {
+      console.log('ungroupAll 执行结果:', response);
+      sendResponse(response);
     }).catch(error => {
       console.error('Error in ungroupAll:', error);
       sendResponse({ success: false, error: error.message });
@@ -737,10 +759,374 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
 
+  // 切换插件激活状态
+  if (message.action === 'toggleExtensionActive') {
+    console.log('处理 toggleExtensionActive 消息');
+    const newState = message.active !== undefined ? message.active : !settings.extensionActive;
+    settings.extensionActive = newState;
+
+    // 保存设置
+    chrome.storage.sync.set({ tabOrganizerSettings: settings }, () => {
+      console.log('设置已保存:', settings);
+    });
+
+    // 如果激活了插件，自动对所有标签页进行分组
+    if (settings.extensionActive) {
+      groupTabsByDomain().then(() => {
+        console.log('插件激活，已对所有标签页进行分组');
+      }).catch(error => {
+        console.error('Error grouping tabs after activation:', error);
+      });
+    }
+
+    sendResponse({
+      success: true,
+      active: settings.extensionActive
+    });
+    return true;
+  }
+
+  // 获取插件状态
+  if (message.action === 'getExtensionStatus') {
+    console.log('处理 getExtensionStatus 消息');
+    sendResponse({
+      success: true,
+      active: settings.extensionActive,
+      settings: settings
+    });
+    return true;
+  }
+
   // 未知消息
   console.warn('收到未知消息:', message);
   sendResponse({ success: false, error: 'Unknown action' });
   return true;
+});
+
+// 监听标签页创建事件
+chrome.tabs.onCreated.addListener(async (tab) => {
+  console.log('标签页创建:', tab);
+
+  // 如果没有启用自动分组或者是用户手动取消分组，直接返回
+  if (!settings.autoGroupOnCreation || manualUngrouping) {
+    console.log('自动分组未启用或者是手动取消分组，退出. 手动取消分组:', manualUngrouping);
+    return;
+  }
+
+  // 如果标签页没有URL，直接返回
+  if (!tab.url) {
+    console.log('标签页没有URL，退出');
+    return;
+  }
+
+  try {
+    // 获取域名
+    const domain = getDomainForGrouping(tab.url);
+    if (!domain || settings.excludeDomains.includes(domain)) {
+      console.log('域名为空或被排除:', domain);
+      return;
+    }
+
+    // 查找是否有匹配的组
+    const groups = await chrome.tabGroups.query({ windowId: tab.windowId });
+    let matchingGroupId = null;
+
+    for (const group of groups) {
+      if (group.title === domain) {
+        matchingGroupId = group.id;
+        break;
+      }
+    }
+
+    // 如果找到匹配的组，将标签页添加到该组
+    if (matchingGroupId) {
+      console.log('找到匹配的组，添加标签页:', matchingGroupId);
+      await chrome.tabs.group({ tabIds: [tab.id], groupId: matchingGroupId });
+
+      // 更新组的最后访问时间
+      groupLastAccessTimes[matchingGroupId] = Date.now();
+
+      // 如果启用了标签排序，对组内标签进行排序
+      if (settings.enableTabSorting && settings.sortOnTabGroupChanged) {
+        await sortTabsInGroup(matchingGroupId);
+      }
+    } else {
+      // 如果没有匹配的组，创建新组
+      console.log('没有匹配的组，创建新组');
+      const newGroupId = await chrome.tabs.group({ tabIds: [tab.id] });
+
+      // 记录组创建时间
+      groupCreateTimes[newGroupId] = Date.now();
+
+      // 设置组标题和颜色
+      const color = getColorForDomain(domain);
+      await chrome.tabGroups.update(newGroupId, {
+        title: domain,
+        color: color
+      });
+
+      // 更新组的最后访问时间
+      groupLastAccessTimes[newGroupId] = Date.now();
+    }
+  } catch (error) {
+    console.error('处理新标签页时出错:', error);
+  }
+});
+
+// 监听标签页更新事件
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  console.log('标签页更新:', tabId, changeInfo, tab);
+
+  // 只有当URL变化时且不是用户手动取消分组时才处理
+  if (changeInfo.url && settings.autoGroupByDomain && !manualUngrouping) {
+    console.log('标签页URL变化:', changeInfo.url, '手动取消分组:', manualUngrouping);
+
+    try {
+      // 获取标签页当前所在的组
+      const currentGroupId = tab.groupId;
+
+      // 如果标签页不在任何组中，或者在一个组中但组标题与域名不匹配，则重新分组
+      if (currentGroupId === TAB_GROUP_ID_NONE) {
+        console.log('标签页不在任何组中，尝试分组');
+
+        // 获取域名
+        const domain = getDomainForGrouping(changeInfo.url);
+        if (!domain || settings.excludeDomains.includes(domain)) {
+          console.log('域名为空或被排除:', domain);
+          return;
+        }
+
+        // 查找是否有匹配的组
+        const groups = await chrome.tabGroups.query({ windowId: tab.windowId });
+        let matchingGroupId = null;
+
+        for (const group of groups) {
+          if (group.title === domain) {
+            matchingGroupId = group.id;
+            break;
+          }
+        }
+
+        // 如果找到匹配的组，将标签页添加到该组
+        if (matchingGroupId) {
+          console.log('找到匹配的组，添加标签页:', matchingGroupId);
+          await chrome.tabs.group({ tabIds: [tabId], groupId: matchingGroupId });
+
+          // 更新组的最后访问时间
+          groupLastAccessTimes[matchingGroupId] = Date.now();
+
+          // 如果启用了标签排序，对组内标签进行排序
+          if (settings.enableTabSorting && settings.sortOnTabGroupChanged) {
+            await sortTabsInGroup(matchingGroupId);
+          }
+        } else {
+          // 如果没有匹配的组，创建新组
+          console.log('没有匹配的组，创建新组');
+          const newGroupId = await chrome.tabs.group({ tabIds: [tabId] });
+
+          // 记录组创建时间
+          groupCreateTimes[newGroupId] = Date.now();
+
+          // 设置组标题和颜色
+          const color = getColorForDomain(domain);
+          await chrome.tabGroups.update(newGroupId, {
+            title: domain,
+            color: color
+          });
+
+          // 更新组的最后访问时间
+          groupLastAccessTimes[newGroupId] = Date.now();
+        }
+      } else {
+        // 标签页已在组中，检查组标题是否与域名匹配
+        try {
+          const group = await chrome.tabGroups.get(currentGroupId);
+          const domain = getDomainForGrouping(changeInfo.url);
+
+          if (group.title !== domain && !settings.excludeDomains.includes(domain)) {
+            console.log('标签页所在组与域名不匹配，移动标签页');
+
+            // 先将标签页从当前组中移除
+            await chrome.tabs.ungroup(tabId);
+
+            // 查找是否有匹配的组
+            const groups = await chrome.tabGroups.query({ windowId: tab.windowId });
+            let matchingGroupId = null;
+
+            for (const g of groups) {
+              if (g.title === domain) {
+                matchingGroupId = g.id;
+                break;
+              }
+            }
+
+            // 如果找到匹配的组，将标签页添加到该组
+            if (matchingGroupId) {
+              console.log('找到匹配的组，添加标签页:', matchingGroupId);
+              await chrome.tabs.group({ tabIds: [tabId], groupId: matchingGroupId });
+
+              // 更新组的最后访问时间
+              groupLastAccessTimes[matchingGroupId] = Date.now();
+
+              // 如果启用了标签排序，对组内标签进行排序
+              if (settings.enableTabSorting && settings.sortOnTabGroupChanged) {
+                await sortTabsInGroup(matchingGroupId);
+              }
+            } else {
+              // 如果没有匹配的组，创建新组
+              console.log('没有匹配的组，创建新组');
+              const newGroupId = await chrome.tabs.group({ tabIds: [tabId] });
+
+              // 记录组创建时间
+              groupCreateTimes[newGroupId] = Date.now();
+
+              // 设置组标题和颜色
+              const color = getColorForDomain(domain);
+              await chrome.tabGroups.update(newGroupId, {
+                title: domain,
+                color: color
+              });
+
+              // 更新组的最后访问时间
+              groupLastAccessTimes[newGroupId] = Date.now();
+            }
+          }
+        } catch (error) {
+          console.error('获取标签组信息失败:', error);
+        }
+      }
+    } catch (error) {
+      console.error('处理标签页更新时出错:', error);
+    }
+  }
+});
+
+// 监听标签页移动事件
+chrome.tabs.onMoved.addListener((tabId, moveInfo) => {
+  console.log('标签页移动:', tabId, moveInfo);
+
+  // 如果启用了标签排序和标签移动时排序
+  if (settings.enableTabSorting && settings.sortOnTabMoved) {
+    // 获取标签页信息
+    chrome.tabs.get(tabId, (tab) => {
+      // 如果标签页在组中，对组内标签进行排序
+      if (tab.groupId && tab.groupId !== TAB_GROUP_ID_NONE) {
+        sortTabsInGroup(tab.groupId);
+      }
+    });
+  }
+});
+
+// 监听标签组更新事件
+chrome.tabGroups.onUpdated.addListener((group) => {
+  console.log('标签组更新:', group);
+
+  // 更新组的最后访问时间
+  groupLastAccessTimes[group.id] = Date.now();
+
+  // 如果启用了标签排序和组更新时排序
+  if (settings.enableTabSorting && settings.sortOnGroupUpdated) {
+    sortTabsInGroup(group.id);
+  }
+});
+
+// 监听标签页激活事件
+chrome.tabs.onActivated.addListener((activeInfo) => {
+  console.log('标签页激活:', activeInfo);
+
+  // 获取标签页信息
+  chrome.tabs.get(activeInfo.tabId, (tab) => {
+    // 如果标签页在组中，更新组的最后访问时间
+    if (tab.groupId && tab.groupId !== TAB_GROUP_ID_NONE) {
+      groupLastAccessTimes[tab.groupId] = Date.now();
+    }
+  });
+});
+
+// 监听标签组变化事件
+chrome.tabGroups.onChanged.addListener((tabGroup) => {
+  console.log('标签组变化:', tabGroup);
+
+  // 更新组的最后访问时间
+  groupLastAccessTimes[tabGroup.id] = Date.now();
+});
+
+// 监听标签页从组中移除事件
+chrome.tabs.onGroupChanged.addListener(async (tabId, { groupId, previousGroupId }) => {
+  console.log('标签页组变化:', tabId, groupId, previousGroupId);
+
+  // 如果标签页从组中移除（groupId 为 -1）且不是用户手动取消分组
+  if (groupId === TAB_GROUP_ID_NONE && settings.autoGroupByDomain && !manualUngrouping) {
+    console.log('标签页从组中移除:', tabId, '手动取消分组:', manualUngrouping);
+
+    try {
+      // 获取标签页信息
+      const tab = await chrome.tabs.get(tabId);
+
+      // 如果标签页有URL，尝试重新分组
+      if (tab.url) {
+        // 获取域名
+        const domain = getDomainForGrouping(tab.url);
+        if (!domain || settings.excludeDomains.includes(domain)) {
+          console.log('域名为空或被排除:', domain);
+          return;
+        }
+
+        // 查找是否有匹配的组
+        const groups = await chrome.tabGroups.query({ windowId: tab.windowId });
+        let matchingGroupId = null;
+
+        for (const group of groups) {
+          if (group.title === domain) {
+            matchingGroupId = group.id;
+            break;
+          }
+        }
+
+        // 如果找到匹配的组，将标签页添加到该组
+        if (matchingGroupId) {
+          console.log('找到匹配的组，添加标签页:', matchingGroupId);
+          await chrome.tabs.group({ tabIds: [tabId], groupId: matchingGroupId });
+
+          // 更新组的最后访问时间
+          groupLastAccessTimes[matchingGroupId] = Date.now();
+
+          // 如果启用了标签排序，对组内标签进行排序
+          if (settings.enableTabSorting && settings.sortOnTabGroupChanged) {
+            await sortTabsInGroup(matchingGroupId);
+          }
+        } else {
+          // 如果没有匹配的组，创建新组
+          console.log('没有匹配的组，创建新组');
+          const newGroupId = await chrome.tabs.group({ tabIds: [tabId] });
+
+          // 记录组创建时间
+          groupCreateTimes[newGroupId] = Date.now();
+
+          // 设置组标题和颜色
+          const color = getColorForDomain(domain);
+          await chrome.tabGroups.update(newGroupId, {
+            title: domain,
+            color: color
+          });
+
+          // 更新组的最后访问时间
+          groupLastAccessTimes[newGroupId] = Date.now();
+        }
+      }
+    } catch (error) {
+      console.error('处理标签页从组中移除时出错:', error);
+    }
+  }
+  // 如果标签页添加到组中，更新组的最后访问时间
+  else if (groupId !== TAB_GROUP_ID_NONE) {
+    groupLastAccessTimes[groupId] = Date.now();
+
+    // 如果启用了标签排序和组变化时排序
+    if (settings.enableTabSorting && settings.sortOnTabGroupChanged) {
+      await sortTabsInGroup(groupId);
+    }
+  }
 });
 
 // 输出初始化完成消息

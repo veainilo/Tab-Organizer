@@ -1065,14 +1065,29 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
 
+  // 获取下一次执行时间
+  if (message.action === 'getNextExecutionTime') {
+    console.log('处理 getNextExecutionTime 消息');
+
+    sendResponse({
+      success: true,
+      nextExecutionTime: nextExecutionTime,
+      monitoringEnabled: settings.monitoringEnabled,
+      extensionActive: settings.extensionActive,
+      autoGroupInterval: settings.autoGroupInterval
+    });
+    return true;
+  }
+
   // 未知消息
   console.warn('收到未知消息:', message);
   sendResponse({ success: false, error: 'Unknown action' });
   return true;
 });
 
-// 定时器ID
+// 定时器ID和下一次执行时间
 let autoGroupTimerId = null; // 用于自动监控的定时器ID
+let nextExecutionTime = 0; // 下一次执行时间的时间戳
 
 // 启动持续监控
 function startContinuousMonitoring() {
@@ -1088,6 +1103,10 @@ function startContinuousMonitoring() {
 
   // 启动综合监控定时器（包含分组、标签组排序和组内标签排序）
   if (settings.autoGroupInterval > 0) {
+    // 设置下一次执行时间
+    nextExecutionTime = Date.now() + settings.autoGroupInterval;
+    console.log('下一次执行时间:', new Date(nextExecutionTime).toLocaleString());
+
     autoGroupTimerId = setInterval(async () => {
       if (settings.extensionActive && !manualUngrouping) {
         console.log('执行自动监控任务');
@@ -1120,6 +1139,10 @@ function startContinuousMonitoring() {
           console.log('自动监控任务完成');
         } catch (error) {
           console.error('自动监控任务出错:', error);
+        } finally {
+          // 更新下一次执行时间
+          nextExecutionTime = Date.now() + settings.autoGroupInterval;
+          console.log('下一次执行时间:', new Date(nextExecutionTime).toLocaleString());
         }
       }
     }, settings.autoGroupInterval);
@@ -1137,6 +1160,9 @@ function stopContinuousMonitoring() {
     autoGroupTimerId = null;
     console.log('自动监控定时器已停止');
   }
+
+  // 重置下一次执行时间
+  nextExecutionTime = 0;
 }
 
 // 根据设置更新监控状态

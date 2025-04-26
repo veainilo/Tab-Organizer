@@ -42,6 +42,58 @@ document.addEventListener('DOMContentLoaded', () => {
   const monitoringToggle = document.getElementById('monitoringToggle');
   const monitoringStatus = document.getElementById('monitoringStatus');
   const monitoringInterval = document.getElementById('monitoringInterval');
+  const monitoringCountdown = document.getElementById('monitoringCountdown');
+
+  // 倒计时相关变量
+  let countdownInterval = null;
+  let nextExecutionTime = 0;
+
+  // 获取下一次执行时间和更新倒计时
+  function getNextExecutionTimeAndUpdateCountdown() {
+    chrome.runtime.sendMessage({ action: 'getNextExecutionTime' }, (response) => {
+      console.log('getNextExecutionTime 响应:', response);
+      if (response && response.success) {
+        nextExecutionTime = response.nextExecutionTime;
+
+        // 清除现有的倒计时
+        if (countdownInterval) {
+          clearInterval(countdownInterval);
+          countdownInterval = null;
+        }
+
+        // 如果监控已启用且有下一次执行时间，启动倒计时
+        if (monitoringToggle.checked && nextExecutionTime > 0) {
+          updateCountdown();
+          countdownInterval = setInterval(updateCountdown, 1000);
+        } else {
+          monitoringCountdown.textContent = '';
+        }
+      }
+    });
+  }
+
+  // 更新倒计时显示
+  function updateCountdown() {
+    const now = Date.now();
+    const timeLeft = Math.max(0, nextExecutionTime - now);
+
+    if (timeLeft <= 0) {
+      monitoringCountdown.textContent = '执行中...';
+      // 重新获取下一次执行时间
+      setTimeout(getNextExecutionTimeAndUpdateCountdown, 2000);
+      return;
+    }
+
+    // 格式化剩余时间
+    const seconds = Math.floor(timeLeft / 1000) % 60;
+    const minutes = Math.floor(timeLeft / (1000 * 60)) % 60;
+
+    if (minutes > 0) {
+      monitoringCountdown.textContent = `${minutes}分${seconds}秒`;
+    } else {
+      monitoringCountdown.textContent = `${seconds}秒`;
+    }
+  }
 
   // 获取插件状态
   chrome.runtime.sendMessage({ action: 'getExtensionStatus' }, (response) => {
@@ -64,6 +116,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (response.settings && response.settings.autoGroupInterval !== undefined) {
         monitoringInterval.value = response.settings.autoGroupInterval;
       }
+
+      // 获取下一次执行时间并更新倒计时
+      getNextExecutionTimeAndUpdateCountdown();
     }
   });
 
@@ -126,6 +181,19 @@ document.addEventListener('DOMContentLoaded', () => {
       if (response && response.success) {
         // 更新状态文本
         updateMonitoringStatus(response.monitoringEnabled);
+
+        // 更新倒计时
+        if (response.monitoringEnabled) {
+          // 获取下一次执行时间并更新倒计时
+          getNextExecutionTimeAndUpdateCountdown();
+        } else {
+          // 清除倒计时
+          if (countdownInterval) {
+            clearInterval(countdownInterval);
+            countdownInterval = null;
+          }
+          monitoringCountdown.textContent = '';
+        }
       }
     });
   });
@@ -149,6 +217,9 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log('updateMonitoringInterval 响应:', response);
       if (response && response.success) {
         showStatus('监控间隔已更新', 'success');
+
+        // 获取新的下一次执行时间并更新倒计时
+        getNextExecutionTimeAndUpdateCountdown();
       } else {
         showStatus('更新监控间隔失败', 'error');
       }
@@ -219,6 +290,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // Load current tab groups and sorting metrics
   loadTabGroups();
   loadSortingMetrics();
+
+  // 定期更新倒计时
+  setInterval(() => {
+    if (monitoringToggle.checked) {
+      getNextExecutionTimeAndUpdateCountdown();
+    }
+  }, 10000); // 每10秒更新一次
 
   // Add event listeners
   groupByDomainButton.addEventListener('click', () => {

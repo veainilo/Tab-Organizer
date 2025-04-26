@@ -336,6 +336,25 @@ async function sortTabGroups() {
       }
     });
 
+    // 计算每个标签页的新位置
+    console.log('计算每个标签页的新位置');
+    let currentIndex = 0;
+    const tabPositions = {};
+
+    // 从前向后处理每个组，计算每个标签页的新位置
+    for (const group of sortedGroups) {
+      const info = groupInfo[group.id];
+      const tabs = info.tabs;
+
+      // 对组内标签页进行排序（可以根据需要选择排序方法）
+      tabs.sort((a, b) => a.index - b.index); // 保持组内原有顺序
+
+      // 计算每个标签页的新位置
+      for (const tab of tabs) {
+        tabPositions[tab.id] = currentIndex++;
+      }
+    }
+
     // 临时取消所有标签页的分组
     console.log('临时取消所有标签页的分组');
     const groupedTabIds = allTabs
@@ -346,10 +365,17 @@ async function sortTabGroups() {
       await chrome.tabs.ungroup(groupedTabIds);
     }
 
-    // 按照排序后的顺序重新创建标签组
-    console.log('按照排序后的顺序重新创建标签组');
+    // 移动所有标签页到新位置
+    console.log('移动所有标签页到新位置');
+    for (const tabId in tabPositions) {
+      try {
+        await chrome.tabs.move(parseInt(tabId), { index: tabPositions[tabId] });
+      } catch (error) {
+        console.error(`移动标签页 ${tabId} 失败:`, error);
+      }
+    }
 
-    // 从前向后处理每个组
+    // 从前向后处理每个组，重新创建标签组
     for (const group of sortedGroups) {
       const info = groupInfo[group.id];
 

@@ -597,7 +597,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // Get all tabs to count tabs in each group
+      // Get all tabs to count tabs in each group and determine their order
       const tabs = await chrome.tabs.query({ currentWindow: true });
       console.log('查询到的标签页:', tabs);
 
@@ -610,15 +610,55 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       console.log('标签组计数:', groupTabCounts);
 
-      // Add each group to the list
-      groups.forEach(group => {
-        console.log('添加标签组到列表:', group);
+      // 获取标签组的顺序
+      // 首先，找出每个组的第一个标签页的索引
+      const groupFirstTabIndex = {};
+      for (const group of groups) {
+        const groupTabs = tabs.filter(tab => tab.groupId === group.id);
+        if (groupTabs.length > 0) {
+          // 找出组内索引最小的标签页
+          const minIndexTab = groupTabs.reduce((min, tab) =>
+            tab.index < min.index ? tab : min, groupTabs[0]);
+          groupFirstTabIndex[group.id] = minIndexTab.index;
+        } else {
+          groupFirstTabIndex[group.id] = Infinity; // 没有标签页的组放在最后
+        }
+      }
+
+      // 根据第一个标签页的索引对组进行排序
+      const sortedGroups = [...groups].sort((a, b) =>
+        groupFirstTabIndex[a.id] - groupFirstTabIndex[b.id]);
+
+      // 添加标题行，显示排序顺序
+      const headerRow = document.createElement('div');
+      headerRow.className = 'group-header';
+      headerRow.innerHTML = `
+        <div class="group-header-title">标签组名称</div>
+        <div class="group-header-info">
+          <span>标签数</span>
+          <span>排序</span>
+          <span>操作</span>
+        </div>
+      `;
+      groupListElement.appendChild(headerRow);
+
+      // Add each group to the list in the sorted order
+      sortedGroups.forEach((group, index) => {
+        console.log('添加标签组到列表:', group, '顺序:', index + 1);
         const groupItem = document.createElement('div');
         groupItem.className = 'group-item';
 
         // 创建左侧标题区域
         const titleContainer = document.createElement('div');
         titleContainer.className = 'group-title';
+
+        // 添加排序序号
+        const orderBadge = document.createElement('span');
+        orderBadge.className = 'order-badge';
+        orderBadge.textContent = (index + 1).toString();
+        orderBadge.style.backgroundColor = getGroupColorBackground(group.color);
+        orderBadge.style.color = getGroupColorText(group.color);
+        titleContainer.appendChild(orderBadge);
 
         // 添加图标
         const groupIcon = document.createElement('span');
@@ -646,6 +686,13 @@ document.addEventListener('DOMContentLoaded', () => {
         groupCount.className = 'group-count';
         groupCount.textContent = groupTabCounts[group.id] || 0;
         rightContainer.appendChild(groupCount);
+
+        // 添加排序指标
+        const sortIndicator = document.createElement('span');
+        sortIndicator.className = 'sort-indicator';
+        sortIndicator.title = '当前排序位置';
+        sortIndicator.textContent = `#${index + 1}`;
+        rightContainer.appendChild(sortIndicator);
 
         // 添加操作按钮
         const actionsContainer = document.createElement('div');
@@ -675,6 +722,12 @@ document.addEventListener('DOMContentLoaded', () => {
         groupItem.addEventListener('click', () => {
           // 可以添加点击组时的操作，例如聚焦到该组
           console.log('点击了标签组:', group.title);
+
+          // 聚焦到该组的第一个标签页
+          const groupTabs = tabs.filter(tab => tab.groupId === group.id);
+          if (groupTabs.length > 0) {
+            chrome.tabs.update(groupTabs[0].id, { active: true });
+          }
         });
 
         groupListElement.appendChild(groupItem);

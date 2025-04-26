@@ -349,51 +349,9 @@ async function sortTabGroups() {
       const info = groupInfo[group.id];
       const tabs = info.tabs;
 
-      // 对组内标签页进行排序
-      // 根据当前排序方法计算每个标签的分数
-      const tabScores = {};
-      for (const tab of tabs) {
-        let score;
-
-        if (settings.sortingMethod === 'title') {
-          // 按标题排序
-          score = tab.title || '';
-        } else if (settings.sortingMethod === 'domain') {
-          // 按域名排序
-          score = extractDomain(tab.url || '');
-        } else if (settings.sortingMethod === 'smart') {
-          // 智能排序（结合多个因素）
-          const accessScore = Math.random(); // 模拟访问时间分数
-          const urlScore = tab.url ? Math.min(tab.url.length / 100, 1) : 0; // URL长度分数
-          const titleScore = tab.title ? Math.min(tab.title.length / 50, 1) : 0; // 标题长度分数
-
-          // 加权平均
-          score = (accessScore * 0.5) + (urlScore * 0.3) + (titleScore * 0.2);
-        } else {
-          // 默认按索引排序
-          score = tab.index;
-        }
-
-        tabScores[tab.id] = score;
-      }
-
-      // 根据分数对标签页进行排序
-      tabs.sort((a, b) => {
-        const scoreA = tabScores[a.id];
-        const scoreB = tabScores[b.id];
-
-        if (typeof scoreA === 'string' && typeof scoreB === 'string') {
-          // 字符串比较
-          return settings.sortAscending ?
-            scoreA.localeCompare(scoreB) :
-            scoreB.localeCompare(scoreA);
-        } else {
-          // 数值比较
-          return settings.sortAscending ?
-            scoreA - scoreB :
-            scoreB - scoreA;
-        }
-      });
+      // 保持组内标签的原有顺序，不进行排序
+      // 只对标签组进行排序，不改变组内标签的顺序
+      tabs.sort((a, b) => a.index - b.index); // 按索引排序，保持原有顺序
 
       // 计算每个标签页的新位置
       for (const tab of tabs) {
@@ -524,17 +482,36 @@ async function sortTabsInGroup(groupId) {
       console.log(`${index + 1}. ${tab.title} (ID: ${tab.id})`);
     });
 
-    // 一次性移动所有标签到新位置
-    // 首先获取当前窗口中所有标签的数量
-    const allTabs = await chrome.tabs.query({ windowId: chrome.windows.WINDOW_ID_CURRENT });
-    const totalTabs = allTabs.length;
+    // 找出组内第一个标签的索引作为基准
+    // 重新获取组内所有标签（按索引排序）
+    const currentTabs = await chrome.tabs.query({ groupId: groupId });
+    currentTabs.sort((a, b) => a.index - b.index);
 
-    // 将所有标签移动到窗口末尾，保持它们的相对顺序
+    if (currentTabs.length === 0) {
+      console.log('组内没有标签，无法排序');
+      return true;
+    }
+
+    // 获取组内第一个标签的索引作为基准
+    const baseIndex = currentTabs[0].index;
+    console.log(`组内第一个标签的索引: ${baseIndex}`);
+
+    // 创建一个映射，记录每个标签的新位置
+    const newPositions = {};
+    sortedTabs.forEach((tab, i) => {
+      newPositions[tab.id] = baseIndex + i;
+    });
+
+    console.log('标签的新位置:', newPositions);
+
+    // 按照新的顺序移动标签
     for (let i = 0; i < sortedTabs.length; i++) {
       try {
-        // 计算目标位置：窗口末尾
-        const targetIndex = totalTabs - sortedTabs.length + i;
-        await chrome.tabs.move(sortedTabs[i].id, { index: targetIndex });
+        const tabId = sortedTabs[i].id;
+        const newIndex = newPositions[tabId];
+
+        console.log(`移动标签 ${tabId} (${sortedTabs[i].title}) 到索引 ${newIndex}`);
+        await chrome.tabs.move(tabId, { index: newIndex });
       } catch (error) {
         console.error(`移动标签页 ${sortedTabs[i].id} 失败:`, error);
       }

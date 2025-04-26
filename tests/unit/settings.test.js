@@ -13,9 +13,21 @@ import chromeMock from '../mocks/chrome-api-mock';
 
 describe('Settings 模块', () => {
   beforeEach(() => {
-    // 重置设置对象到测试前状态
+    // 重置settings对象到初始状态
     Object.keys(settings).forEach(key => {
       delete settings[key];
+    });
+    
+    // 初始化默认值，确保即使没有从mock获取到值也有默认值
+    Object.assign(settings, {
+      extensionActive: true,
+      autoGroupByDomain: true,
+      autoGroupOnCreation: true,
+      excludeDomains: [],
+      monitoringEnabled: true,
+      continuousMonitoring: true,
+      autoGroupInterval: 5000,
+      autoSortInterval: 10000
     });
     
     // 对于每个测试，默认模拟没有存储的设置

@@ -11,24 +11,24 @@ let manualUngrouping = false;
 // 基本设置
 let settings = {
   extensionActive: true,          // 默认激活状态
-  autoGroupByDomain: true,
-  autoGroupOnCreation: true,
-  groupByRootDomain: true,
-  ignoreTLD: true,
-  useDynamicColors: true,
-  enableTabSorting: true,
-  sortingMethod: 'domain',
-  sortAscending: true,
-  enableGroupSorting: true,
-  groupSortingMethod: 'smart',
-  groupSortAscending: true,
-  excludeDomains: [],
-  colorScheme: {
+  autoGroupByDomain: true,        // 自动按域名分组
+  autoGroupOnCreation: true,      // 创建标签时自动分组
+  groupByRootDomain: true,        // 按根域名分组
+  ignoreTLD: true,                // 忽略顶级域名
+  useDynamicColors: true,         // 使用动态颜色
+  enableTabSorting: true,         // 启用标签排序
+  sortingMethod: 'domain',        // 标签排序方法
+  sortAscending: true,            // 标签排序顺序（升序）
+  enableGroupSorting: true,       // 启用标签组排序
+  groupSortingMethod: 'smart',    // 标签组排序方法
+  groupSortAscending: true,       // 标签组排序顺序（升序）
+  excludeDomains: [],             // 排除的域名
+  colorScheme: {                  // 颜色方案
     'default': 'blue'
   },
-  // 新增设置项
+  // 监控设置
   continuousMonitoring: true,     // 持续监控标签状态
-  autoGroupInterval: 5000,        // 自动分组间隔（毫秒）
+  autoGroupInterval: 5000,        // 自动监控间隔（毫秒）
   autoSortInterval: 10000,        // 自动排序间隔（毫秒）
   monitoringEnabled: true         // 是否启用监控
 };
@@ -277,6 +277,12 @@ async function sortTabGroups() {
     // 即使只有一个标签组，也需要对组内标签进行排序
     console.log('对标签组进行排序，包括组内标签');
 
+    // 记录当前标签组的展开/折叠状态
+    const groupStates = {};
+    for (const group of groups) {
+      groupStates[group.id] = group.collapsed;
+    }
+
     // 获取每个组的信息，包括组内标签页和排序分数
     const groupInfo = {};
 
@@ -400,6 +406,13 @@ async function sortTabGroups() {
         title: info.title,
         color: info.color
       });
+
+      // 恢复组的展开/折叠状态
+      if (groupStates[group.id] !== undefined) {
+        await chrome.tabGroups.update(newGroupId, {
+          collapsed: groupStates[group.id]
+        });
+      }
     }
 
     console.log('标签组排序完成');
@@ -1074,7 +1087,7 @@ function startContinuousMonitoring() {
   stopContinuousMonitoring();
 
   // 启动综合监控定时器（包含分组、标签组排序和组内标签排序）
-  if (settings.continuousMonitoring && settings.autoGroupInterval > 0) {
+  if (settings.autoGroupInterval > 0) {
     autoGroupTimerId = setInterval(async () => {
       if (settings.extensionActive && !manualUngrouping) {
         console.log('执行自动监控任务');
@@ -1128,10 +1141,21 @@ function stopContinuousMonitoring() {
 
 // 根据设置更新监控状态
 function updateMonitoringStatus() {
+  console.log('更新监控状态，当前设置:', {
+    monitoringEnabled: settings.monitoringEnabled,
+    extensionActive: settings.extensionActive,
+    autoGroupInterval: settings.autoGroupInterval,
+    autoGroupByDomain: settings.autoGroupByDomain,
+    enableGroupSorting: settings.enableGroupSorting,
+    enableTabSorting: settings.enableTabSorting
+  });
+
+  // 无论如何先停止现有的监控
+  stopContinuousMonitoring();
+
+  // 如果启用了监控且扩展处于激活状态，则启动监控
   if (settings.monitoringEnabled && settings.extensionActive) {
     startContinuousMonitoring();
-  } else {
-    stopContinuousMonitoring();
   }
 }
 

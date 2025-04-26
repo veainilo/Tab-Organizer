@@ -20,7 +20,7 @@ let settings = {
   sortingMethod: 'domain',  // 排序方法
   sortAscending: true,      // 升序排序
   enableGroupSorting: true, // 启用标签组排序
-  groupSortingMethod: 'title', // 标签组排序方法
+  groupSortingMethod: 'smart', // 标签组排序方法
   groupSortAscending: true, // 标签组升序排序
   sortOnGroupCreated: true,  // 创建标签组时排序
   sortOnGroupUpdated: true,  // 更新标签组时排序

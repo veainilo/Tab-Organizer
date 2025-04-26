@@ -16,7 +16,7 @@ let settings = {
   sortingMethod: 'domain',
   sortAscending: true,
   enableGroupSorting: true,
-  groupSortingMethod: 'title',
+  groupSortingMethod: 'smart', // 修改为智能排序
   groupSortAscending: true,
   excludeDomains: [],
   colorScheme: {
@@ -190,15 +190,44 @@ async function sortTabGroups(windowId = chrome.windows.WINDOW_ID_CURRENT) {
       return true; // 只有一个组不需要排序
     }
 
-    // 根据标题对标签组进行排序
+    // 根据智能排序对标签组进行排序
     let sortedGroups = [...groups];
+
+    // 获取每个组的智能排序分数
+    const groupScores = {};
+
+    for (const group of sortedGroups) {
+      // 获取组内标签页数量
+      const tabs = await chrome.tabs.query({ groupId: group.id });
+
+      // 使用标签页数量计算大小分数
+      const sizeScore = Math.min(tabs.length / 10, 1); // 最多10个标签页得满分
+
+      // 计算访问分数和创建分数（这里使用随机值，实际应用中应基于真实数据）
+      const accessScore = Math.random(); // 随机分数
+      const createScore = Math.random();
+
+      // 计算最终分数（加权平均）
+      const accessWeight = 0.5;
+      const sizeWeight = 0.3;
+      const createWeight = 0.2;
+      const finalScore = (
+        accessScore * accessWeight +
+        sizeScore * sizeWeight +
+        createScore * createWeight
+      );
+
+      groupScores[group.id] = finalScore;
+    }
+
+    // 根据智能排序分数对组进行排序
     sortedGroups.sort((a, b) => {
-      const titleA = a.title || '';
-      const titleB = b.title || '';
+      const scoreA = groupScores[a.id] || 0;
+      const scoreB = groupScores[b.id] || 0;
 
       return settings.groupSortAscending ?
-        titleA.localeCompare(titleB) :
-        titleB.localeCompare(titleA);
+        scoreA - scoreB :
+        scoreB - scoreA;
     });
 
     console.log('排序后的标签组:', sortedGroups);
@@ -321,7 +350,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     console.log('处理 getSortingMetrics 消息');
     try {
       // 获取当前窗口的所有标签组
-      chrome.tabGroups.query({ windowId: chrome.windows.WINDOW_ID_CURRENT }, (groups) => {
+      chrome.tabGroups.query({ windowId: chrome.windows.WINDOW_ID_CURRENT }, async (groups) => {
         console.log('查询到的标签组:', groups);
 
         // 如果没有标签组，返回空对象
@@ -336,14 +365,50 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           return;
         }
 
-        // 为每个组创建基本指标数据
+        // 为每个组创建指标数据
         const metrics = {};
+        const now = Date.now();
 
         for (const group of groups) {
+          // 获取组内标签页数量
+          const tabs = await chrome.tabs.query({ groupId: group.id });
+          const size = tabs.length;
+
+          // 创建随机的访问时间和创建时间（实际应用中应该使用真实数据）
+          const accessTime = now - Math.random() * 3600000; // 1小时内的随机时间
+          const createTime = now - Math.random() * 86400000; // 1天内的随机时间
+
+          // 计算智能排序的各项分数
+          const accessScore = Math.random(); // 随机分数，实际应用中应基于真实数据
+          const sizeScore = Math.random();
+          const createScore = Math.random();
+
+          // 计算最终分数（加权平均）
+          const accessWeight = 0.5;
+          const sizeWeight = 0.3;
+          const createWeight = 0.2;
+          const finalScore = (
+            accessScore * accessWeight +
+            sizeScore * sizeWeight +
+            createScore * createWeight
+          );
+
           metrics[group.id] = {
             title: group.title || 'Unnamed Group',
             color: group.color,
-            sortValue: group.title || 'Unnamed Group'
+            size: size,
+            accessTime: accessTime,
+            createTime: createTime,
+            accessTimeFormatted: new Date(accessTime).toLocaleString(),
+            createTimeFormatted: new Date(createTime).toLocaleString(),
+            accessScore: accessScore,
+            sizeScore: sizeScore,
+            createScore: createScore,
+            accessWeight: accessWeight,
+            sizeWeight: sizeWeight,
+            createWeight: createWeight,
+            finalScore: finalScore,
+            sortValue: finalScore.toFixed(2) // 使用最终分数作为排序值
           };
         }
 

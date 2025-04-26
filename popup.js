@@ -280,8 +280,24 @@ document.addEventListener('DOMContentLoaded', () => {
           groupTitle.textContent = groupMetrics.title || 'Unnamed Group';
           sortingMetricsElement.appendChild(groupTitle);
 
-          // 添加排序值
-          addMetricItem(sortingMetricsElement, 'Sort Value', groupMetrics.sortValue);
+          // 根据排序方法显示相应的指标
+          if (sortingMethod === 'smart') {
+            // 添加智能排序的各项指标
+            addMetricItem(sortingMetricsElement, 'Access Time', groupMetrics.accessTimeFormatted || 'N/A');
+            addMetricItem(sortingMetricsElement, 'Access Score', groupMetrics.accessScore ? groupMetrics.accessScore.toFixed(2) : 'N/A', groupMetrics.accessWeight);
+
+            addMetricItem(sortingMetricsElement, 'Size', groupMetrics.size || 'N/A');
+            addMetricItem(sortingMetricsElement, 'Size Score', groupMetrics.sizeScore ? groupMetrics.sizeScore.toFixed(2) : 'N/A', groupMetrics.sizeWeight);
+
+            addMetricItem(sortingMetricsElement, 'Create Time', groupMetrics.createTimeFormatted || 'N/A');
+            addMetricItem(sortingMetricsElement, 'Create Score', groupMetrics.createScore ? groupMetrics.createScore.toFixed(2) : 'N/A', groupMetrics.createWeight);
+
+            // 添加最终分数
+            addMetricItem(sortingMetricsElement, 'Final Score', groupMetrics.finalScore ? groupMetrics.finalScore.toFixed(2) : 'N/A');
+          } else {
+            // 添加排序值
+            addMetricItem(sortingMetricsElement, 'Sort Value', groupMetrics.sortValue || 'N/A');
+          }
         }
 
         // 显示指标容器

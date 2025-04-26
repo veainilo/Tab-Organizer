@@ -234,6 +234,8 @@ const tabUsageCount = {};
 const groupCreateTimes = {};
 // 标签组最后访问时间记录
 const groupLastAccessTimes = {};
+// 标签组排序指标数据
+const groupSortingMetrics = {};
 
 // 为域名生成一致的颜色
 function getColorForDomain(domain) {
@@ -735,6 +737,13 @@ async function sortTabGroups(windowId = chrome.windows.WINDOW_ID_CURRENT) {
     const groups = await chrome.tabGroups.query({ windowId });
     if (groups.length <= 1) return; // 只有一个组不需要排序
 
+    // 清除旧的排序指标数据
+    groups.forEach(group => {
+      if (groupSortingMetrics[group.id]) {
+        delete groupSortingMetrics[group.id];
+      }
+    });
+
     // 获取每个组的第一个标签页的索引，用于确定组的位置
     const groupPositions = {};
     for (const group of groups) {
@@ -753,6 +762,16 @@ async function sortTabGroups(windowId = chrome.windows.WINDOW_ID_CURRENT) {
         sortedGroups.sort((a, b) => {
           const titleA = a.title || '';
           const titleB = b.title || '';
+
+          // 保存排序指标数据
+          if (!groupSortingMetrics[a.id]) groupSortingMetrics[a.id] = {};
+          if (!groupSortingMetrics[b.id]) groupSortingMetrics[b.id] = {};
+
+          groupSortingMetrics[a.id].title = titleA;
+          groupSortingMetrics[a.id].sortValue = titleA;
+          groupSortingMetrics[b.id].title = titleB;
+          groupSortingMetrics[b.id].sortValue = titleB;
+
           return settings.groupSortAscending ?
             titleA.localeCompare(titleB) :
             titleB.localeCompare(titleA);
@@ -769,6 +788,18 @@ async function sortTabGroups(windowId = chrome.windows.WINDOW_ID_CURRENT) {
         sortedGroups.sort((a, b) => {
           const colorA = colorOrder[a.color] || 0;
           const colorB = colorOrder[b.color] || 0;
+
+          // 保存排序指标数据
+          if (!groupSortingMetrics[a.id]) groupSortingMetrics[a.id] = {};
+          if (!groupSortingMetrics[b.id]) groupSortingMetrics[b.id] = {};
+
+          groupSortingMetrics[a.id].color = a.color;
+          groupSortingMetrics[a.id].colorOrder = colorA;
+          groupSortingMetrics[a.id].sortValue = colorA;
+          groupSortingMetrics[b.id].color = b.color;
+          groupSortingMetrics[b.id].colorOrder = colorB;
+          groupSortingMetrics[b.id].sortValue = colorB;
+
           return settings.groupSortAscending ?
             colorA - colorB :
             colorB - colorA;
@@ -781,6 +812,11 @@ async function sortTabGroups(windowId = chrome.windows.WINDOW_ID_CURRENT) {
         for (const group of groups) {
           const tabs = await chrome.tabs.query({ groupId: group.id });
           groupSizes[group.id] = tabs.length;
+
+          // 初始化排序指标数据
+          if (!groupSortingMetrics[group.id]) groupSortingMetrics[group.id] = {};
+          groupSortingMetrics[group.id].size = tabs.length;
+          groupSortingMetrics[group.id].sortValue = tabs.length;
         }
 
         sortedGroups.sort((a, b) => {
@@ -797,6 +833,21 @@ async function sortTabGroups(windowId = chrome.windows.WINDOW_ID_CURRENT) {
         sortedGroups.sort((a, b) => {
           const timeA = groupCreateTimes[a.id] || 0;
           const timeB = groupCreateTimes[b.id] || 0;
+
+          // 保存排序指标数据
+          if (!groupSortingMetrics[a.id]) groupSortingMetrics[a.id] = {};
+          if (!groupSortingMetrics[b.id]) groupSortingMetrics[b.id] = {};
+
+          const dateA = timeA ? new Date(timeA) : new Date(0);
+          const dateB = timeB ? new Date(timeB) : new Date(0);
+
+          groupSortingMetrics[a.id].createTime = timeA;
+          groupSortingMetrics[a.id].createTimeFormatted = dateA.toLocaleString();
+          groupSortingMetrics[a.id].sortValue = timeA;
+          groupSortingMetrics[b.id].createTime = timeB;
+          groupSortingMetrics[b.id].createTimeFormatted = dateB.toLocaleString();
+          groupSortingMetrics[b.id].sortValue = timeB;
+
           return settings.groupSortAscending ?
             timeA - timeB :
             timeB - timeA;
@@ -808,6 +859,21 @@ async function sortTabGroups(windowId = chrome.windows.WINDOW_ID_CURRENT) {
         sortedGroups.sort((a, b) => {
           const timeA = groupLastAccessTimes[a.id] || 0;
           const timeB = groupLastAccessTimes[b.id] || 0;
+
+          // 保存排序指标数据
+          if (!groupSortingMetrics[a.id]) groupSortingMetrics[a.id] = {};
+          if (!groupSortingMetrics[b.id]) groupSortingMetrics[b.id] = {};
+
+          const dateA = timeA ? new Date(timeA) : new Date(0);
+          const dateB = timeB ? new Date(timeB) : new Date(0);
+
+          groupSortingMetrics[a.id].lastAccessTime = timeA;
+          groupSortingMetrics[a.id].lastAccessTimeFormatted = dateA.toLocaleString();
+          groupSortingMetrics[a.id].sortValue = timeA;
+          groupSortingMetrics[b.id].lastAccessTime = timeB;
+          groupSortingMetrics[b.id].lastAccessTimeFormatted = dateB.toLocaleString();
+          groupSortingMetrics[b.id].sortValue = timeB;
+
           return settings.groupSortAscending ?
             timeA - timeB :
             timeB - timeA;
@@ -880,7 +946,26 @@ function calculateGroupSmartScore(groupId, groupSize) {
   const createScore = createTime ? (now - createTime) / 86400000 : 30; // 天为单位，最大30
 
   // 综合分数 (访问时间占40%，标签页数量占40%，创建时间占20%)
-  return (accessScore * 0.4) + (sizeScore * 0.4) + (createScore * 0.2);
+  const finalScore = (accessScore * 0.4) + (sizeScore * 0.4) + (createScore * 0.2);
+
+  // 保存排序指标数据
+  groupSortingMetrics[groupId] = {
+    accessTime: accessTime,
+    accessScore: accessScore,
+    accessWeight: 0.4,
+
+    size: groupSize,
+    sizeScore: sizeScore,
+    sizeWeight: 0.4,
+
+    createTime: createTime,
+    createScore: createScore,
+    createWeight: 0.2,
+
+    finalScore: finalScore
+  };
+
+  return finalScore;
 }
 
 // 监听标签组更新事件
@@ -995,5 +1080,38 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       sendResponse({ success: false, error: error.message });
     });
     return true; // Indicates async response
+  }
+
+  if (message.action === 'getSortingMetrics') {
+    console.log('getSortingMetrics message received');
+    try {
+      // 获取当前窗口的所有标签组
+      chrome.tabGroups.query({ windowId: chrome.windows.WINDOW_ID_CURRENT }, (groups) => {
+        console.log('Tab groups found:', groups);
+        // 为每个组添加标题信息
+        const metricsWithTitles = {};
+        groups.forEach(group => {
+          if (groupSortingMetrics[group.id]) {
+            metricsWithTitles[group.id] = {
+              ...groupSortingMetrics[group.id],
+              title: group.title || 'Unnamed Group',
+              color: group.color
+            };
+          }
+        });
+
+        sendResponse({
+          success: true,
+          metrics: metricsWithTitles,
+          sortingMethod: settings.groupSortingMethod,
+          sortAscending: settings.groupSortAscending
+        });
+      });
+      return true; // Indicates async response
+    } catch (error) {
+      console.error('Error getting sorting metrics:', error);
+      sendResponse({ success: false, error: error.message });
+      return true;
+    }
   }
 });

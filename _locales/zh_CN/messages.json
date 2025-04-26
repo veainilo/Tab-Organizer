@@ -74,5 +74,28 @@
   "groupsSorted": {"message": "标签组排序成功！", "description": "标签组排序成功时的消息"},
   "errorSortingGroups": {"message": "排序标签组时出错：$1", "description": "排序标签组失败时的错误消息"},
   "noGroupsToSort": {"message": "没有可排序的标签页组", "description": "没有可排序的标签页组时的消息"},
-  "errorLoadingGroups": {"message": "加载标签页组时出错", "description": "加载标签页组失败时的错误消息"}
+  "errorLoadingGroups": {"message": "加载标签页组时出错", "description": "加载标签页组失败时的错误消息"},
+
+  "showMetrics": {"message": "显示排序指标", "description": "显示排序指标按钮"},
+  "hideMetrics": {"message": "隐藏指标", "description": "隐藏指标按钮"},
+  "sortingMetrics": {"message": "排序指标", "description": "排序指标部分标题"},
+  "noSortingMetrics": {"message": "没有可用的排序指标", "description": "没有可用的排序指标时的消息"},
+
+  "sortingMethodLabel": {"message": "排序方法", "description": "排序方法标签"},
+  "sortingOrderLabel": {"message": "排序顺序", "description": "排序顺序标签"},
+  "ascending": {"message": "升序", "description": "升序"},
+  "descending": {"message": "降序", "description": "降序"},
+
+  "titleLabel": {"message": "标题", "description": "标题标签"},
+  "colorLabel": {"message": "颜色", "description": "颜色标签"},
+  "colorOrderLabel": {"message": "颜色顺序", "description": "颜色顺序标签"},
+  "sizeLabel": {"message": "标签页数量", "description": "标签页数量标签"},
+  "createTimeLabel": {"message": "创建时间", "description": "创建时间标签"},
+  "lastAccessedLabel": {"message": "最后访问时间", "description": "最后访问时间标签"},
+
+  "accessTimeLabel": {"message": "最近访问时间", "description": "智能排序中的最近访问时间标签"},
+  "accessScoreLabel": {"message": "访问分数", "description": "智能排序中的访问分数标签"},
+  "sizeScoreLabel": {"message": "大小分数", "description": "智能排序中的大小分数标签"},
+  "createScoreLabel": {"message": "创建分数", "description": "智能排序中的创建分数标签"},
+  "finalScoreLabel": {"message": "最终分数", "description": "智能排序中的最终分数标签"}
 }

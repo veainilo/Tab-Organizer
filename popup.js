@@ -35,9 +35,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const statusElement = document.getElementById('status');
   const groupListElement = document.getElementById('groupList');
   const noGroupsElement = document.getElementById('noGroups');
+  const sortingMetricsContainer = document.getElementById('sortingMetricsContainer');
+  const sortingMetricsElement = document.getElementById('sortingMetrics');
 
-  // Load current tab groups
+  // Load current tab groups and sorting metrics
   loadTabGroups();
+  loadSortingMetrics();
 
   // Add event listeners
   groupByDomainButton.addEventListener('click', () => {
@@ -101,12 +104,16 @@ document.addEventListener('DOMContentLoaded', () => {
       if (response && response.success) {
         showStatus(getMessage('groupsSorted'), 'success');
         loadTabGroups();
+        // 排序后获取并显示排序指标
+        loadSortingMetrics();
       } else {
         const error = response ? response.error : 'Unknown error';
         showStatus(getMessage('errorSortingGroups', [error]), 'error');
       }
     });
   });
+
+  // 排序指标现在默认显示，不需要按钮事件
 
   // Function to show status messages
   function showStatus(message, type) {
@@ -125,6 +132,145 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
       statusElement.style.display = 'none';
     }, 3000);
+  }
+
+  // 加载并显示排序指标数据
+  function loadSortingMetrics() {
+    console.log('loadSortingMetrics function called');
+    chrome.runtime.sendMessage({ action: 'getSortingMetrics' }, (response) => {
+      console.log('getSortingMetrics response:', response);
+      if (response && response.success) {
+        // 清空指标容器
+        while (sortingMetricsElement.firstChild) {
+          sortingMetricsElement.removeChild(sortingMetricsElement.firstChild);
+        }
+
+        const metrics = response.metrics;
+        const sortingMethod = response.sortingMethod;
+        const sortAscending = response.sortAscending;
+
+        // 如果没有指标数据，显示提示信息
+        if (Object.keys(metrics).length === 0) {
+          const noMetricsMsg = document.createElement('div');
+          noMetricsMsg.textContent = getMessage('noSortingMetrics');
+          sortingMetricsElement.appendChild(noMetricsMsg);
+          return;
+        }
+
+        // 添加排序方法信息
+        const methodInfo = document.createElement('div');
+        methodInfo.className = 'metric-item';
+        methodInfo.innerHTML = `<span class="metric-name">${getMessage('sortingMethodLabel')}:</span> <span class="metric-value">${getMessage('sortBy' + sortingMethod.charAt(0).toUpperCase() + sortingMethod.slice(1))}</span>`;
+        sortingMetricsElement.appendChild(methodInfo);
+
+        // 添加排序顺序信息
+        const orderInfo = document.createElement('div');
+        orderInfo.className = 'metric-item';
+        orderInfo.innerHTML = `<span class="metric-name">${getMessage('sortingOrderLabel')}:</span> <span class="metric-value">${sortAscending ? getMessage('ascending') : getMessage('descending')}</span>`;
+        sortingMetricsElement.appendChild(orderInfo);
+
+        // 添加分隔线
+        const divider = document.createElement('hr');
+        divider.style.margin = '10px 0';
+        divider.style.border = 'none';
+        divider.style.borderTop = '1px solid #e1e1e1';
+        sortingMetricsElement.appendChild(divider);
+
+        // 为每个标签组添加指标数据
+        for (const groupId in metrics) {
+          const groupMetrics = metrics[groupId];
+
+          // 创建标签组标题
+          const groupTitle = document.createElement('div');
+          groupTitle.className = 'metric-group-title';
+          groupTitle.style.fontWeight = 'bold';
+          groupTitle.style.marginTop = '10px';
+          groupTitle.style.marginBottom = '5px';
+          groupTitle.style.padding = '3px 5px';
+          groupTitle.style.borderRadius = '3px';
+          groupTitle.style.backgroundColor = getGroupColorBackground(groupMetrics.color);
+          groupTitle.style.color = getGroupColorText(groupMetrics.color);
+          groupTitle.textContent = groupMetrics.title;
+          sortingMetricsElement.appendChild(groupTitle);
+
+          // 根据排序方法显示相应的指标
+          switch (sortingMethod) {
+            case 'title':
+              addMetricItem(sortingMetricsElement, getMessage('titleLabel'), groupMetrics.title);
+              break;
+
+            case 'color':
+              addMetricItem(sortingMetricsElement, getMessage('colorLabel'), getMessage(groupMetrics.color));
+              addMetricItem(sortingMetricsElement, getMessage('colorOrderLabel'), groupMetrics.colorOrder);
+              break;
+
+            case 'size':
+              addMetricItem(sortingMetricsElement, getMessage('sizeLabel'), groupMetrics.size);
+              break;
+
+            case 'createTime':
+              addMetricItem(sortingMetricsElement, getMessage('createTimeLabel'), groupMetrics.createTimeFormatted);
+              break;
+
+            case 'lastAccessed':
+              addMetricItem(sortingMetricsElement, getMessage('lastAccessedLabel'), groupMetrics.lastAccessTimeFormatted);
+              break;
+
+            case 'smart':
+              // 添加智能排序的各项指标
+              addMetricItem(sortingMetricsElement, getMessage('accessTimeLabel'), groupMetrics.accessTime ? new Date(groupMetrics.accessTime).toLocaleString() : 'N/A');
+              addMetricItem(sortingMetricsElement, getMessage('accessScoreLabel'), groupMetrics.accessScore.toFixed(2), groupMetrics.accessWeight);
+
+              addMetricItem(sortingMetricsElement, getMessage('sizeLabel'), groupMetrics.size);
+              addMetricItem(sortingMetricsElement, getMessage('sizeScoreLabel'), groupMetrics.sizeScore.toFixed(2), groupMetrics.sizeWeight);
+
+              addMetricItem(sortingMetricsElement, getMessage('createTimeLabel'), groupMetrics.createTime ? new Date(groupMetrics.createTime).toLocaleString() : 'N/A');
+              addMetricItem(sortingMetricsElement, getMessage('createScoreLabel'), groupMetrics.createScore.toFixed(2), groupMetrics.createWeight);
+
+              // 添加最终分数
+              addMetricItem(sortingMetricsElement, getMessage('finalScoreLabel'), groupMetrics.finalScore.toFixed(2), 1.0);
+              break;
+          }
+        }
+
+        // 显示指标容器
+        sortingMetricsContainer.style.display = 'block';
+      } else {
+        console.error('Error loading sorting metrics:', response ? response.error : 'Unknown error');
+      }
+    });
+  }
+
+  // 添加指标项
+  function addMetricItem(container, name, value, weight) {
+    const item = document.createElement('div');
+    item.className = 'metric-item';
+
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'metric-name';
+    nameSpan.textContent = name;
+
+    const valueSpan = document.createElement('span');
+    valueSpan.className = 'metric-value';
+    valueSpan.textContent = value;
+
+    item.appendChild(nameSpan);
+    item.appendChild(valueSpan);
+
+    // 如果提供了权重，添加进度条
+    if (weight !== undefined) {
+      const barContainer = document.createElement('div');
+      barContainer.className = 'metric-bar-container';
+
+      const bar = document.createElement('div');
+      bar.className = 'metric-bar';
+      bar.style.width = `${weight * 100}%`;
+
+      barContainer.appendChild(bar);
+      item.appendChild(barContainer);
+    }
+
+    container.appendChild(item);
   }
 
   // Function to load and display current tab groups
@@ -185,35 +331,67 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Helper function to get background color for group
   function getGroupColorBackground(color) {
-    const colors = {
-      'grey': '#f1f3f4',
-      'blue': '#d0e8ff',
-      'red': '#ffd0d0',
-      'yellow': '#fff8d0',
-      'green': '#d0ffd0',
-      'pink': '#ffd0f0',
-      'purple': '#e8d0ff',
-      'cyan': '#d0ffff',
-      'orange': '#ffecd0'
-    };
+    // 检查是否在指标视图中
+    const inMetricsView = document.getElementById('sortingMetricsContainer') &&
+                         document.getElementById('sortingMetricsContainer').style.display !== 'none';
 
-    return colors[color] || '#f1f3f4';
+    // 在列表视图中使用浅色背景
+    if (!inMetricsView) {
+      const colors = {
+        'grey': '#f1f3f4',
+        'blue': '#d0e8ff',
+        'red': '#ffd0d0',
+        'yellow': '#fff8d0',
+        'green': '#d0ffd0',
+        'pink': '#ffd0f0',
+        'purple': '#e8d0ff',
+        'cyan': '#d0ffff',
+        'orange': '#ffecd0'
+      };
+      return colors[color] || '#f1f3f4';
+    }
+    // 在指标视图中使用深色背景
+    else {
+      const colors = {
+        'grey': '#bdc1c6',
+        'blue': '#8ab4f8',
+        'red': '#f28b82',
+        'yellow': '#fdd663',
+        'green': '#81c995',
+        'pink': '#ff8bcb',
+        'purple': '#d7aefb',
+        'cyan': '#78d9ec',
+        'orange': '#fcad70'
+      };
+      return colors[color] || '#bdc1c6';
+    }
   }
 
   // Helper function to get text color for group
   function getGroupColorText(color) {
-    const colors = {
-      'grey': '#444444',
-      'blue': '#0046b5',
-      'red': '#b50000',
-      'yellow': '#b57700',
-      'green': '#00b500',
-      'pink': '#b5007a',
-      'purple': '#7a00b5',
-      'cyan': '#00b5b5',
-      'orange': '#b56a00'
-    };
+    // 检查是否在指标视图中
+    const inMetricsView = document.getElementById('sortingMetricsContainer') &&
+                         document.getElementById('sortingMetricsContainer').style.display !== 'none';
 
-    return colors[color] || '#444444';
+    // 在列表视图中使用深色文本
+    if (!inMetricsView) {
+      const colors = {
+        'grey': '#444444',
+        'blue': '#0046b5',
+        'red': '#b50000',
+        'yellow': '#b57700',
+        'green': '#00b500',
+        'pink': '#b5007a',
+        'purple': '#7a00b5',
+        'cyan': '#00b5b5',
+        'orange': '#b56a00'
+      };
+      return colors[color] || '#444444';
+    }
+    // 在指标视图中使用浅色/深色文本
+    else {
+      const darkTextColors = ['yellow', 'green', 'cyan'];
+      return darkTextColors.includes(color) ? '#202124' : '#ffffff';
+    }
   }
 });

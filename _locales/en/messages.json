@@ -74,5 +74,28 @@
   "groupsSorted": {"message": "Tab groups sorted successfully!", "description": "Success message when tab groups are sorted"},
   "errorSortingGroups": {"message": "Error sorting tab groups: $1", "description": "Error message when tab groups cannot be sorted"},
   "noGroupsToSort": {"message": "No tab groups to sort", "description": "Message when there are no tab groups to sort"},
-  "errorLoadingGroups": {"message": "Error loading tab groups", "description": "Error message when tab groups cannot be loaded"}
+  "errorLoadingGroups": {"message": "Error loading tab groups", "description": "Error message when tab groups cannot be loaded"},
+
+  "showMetrics": {"message": "Show Sorting Metrics", "description": "Button to show sorting metrics"},
+  "hideMetrics": {"message": "Hide Metrics", "description": "Button to hide sorting metrics"},
+  "sortingMetrics": {"message": "Sorting Metrics", "description": "Title for sorting metrics section"},
+  "noSortingMetrics": {"message": "No sorting metrics available", "description": "Message when no sorting metrics are available"},
+
+  "sortingMethodLabel": {"message": "Sorting Method", "description": "Label for sorting method"},
+  "sortingOrderLabel": {"message": "Sorting Order", "description": "Label for sorting order"},
+  "ascending": {"message": "Ascending", "description": "Ascending order"},
+  "descending": {"message": "Descending", "description": "Descending order"},
+
+  "titleLabel": {"message": "Title", "description": "Label for title"},
+  "colorLabel": {"message": "Color", "description": "Label for color"},
+  "colorOrderLabel": {"message": "Color Order", "description": "Label for color order"},
+  "sizeLabel": {"message": "Number of Tabs", "description": "Label for number of tabs"},
+  "createTimeLabel": {"message": "Creation Time", "description": "Label for creation time"},
+  "lastAccessedLabel": {"message": "Last Accessed", "description": "Label for last accessed time"},
+
+  "accessTimeLabel": {"message": "Last Access Time", "description": "Label for last access time in smart sorting"},
+  "accessScoreLabel": {"message": "Access Score", "description": "Label for access score in smart sorting"},
+  "sizeScoreLabel": {"message": "Size Score", "description": "Label for size score in smart sorting"},
+  "createScoreLabel": {"message": "Creation Score", "description": "Label for creation score in smart sorting"},
+  "finalScoreLabel": {"message": "Final Score", "description": "Label for final score in smart sorting"}
 }

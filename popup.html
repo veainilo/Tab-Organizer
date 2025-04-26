@@ -101,6 +101,83 @@
       border-radius: 10px;
       font-size: 12px;
     }
+
+    .sorting-metrics-container {
+      margin-top: 15px;
+      border: 1px solid #e1e1e1;
+      border-radius: 4px;
+      padding: 10px;
+      background-color: #f9f9f9;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .metrics-title {
+      font-size: 16px;
+      margin-top: 0;
+      margin-bottom: 10px;
+      color: #0078d7;
+    }
+
+    .sorting-metrics {
+      font-size: 13px;
+      line-height: 1.4;
+      margin-bottom: 10px;
+    }
+
+    .metric-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid #e1e1e1;
+    }
+
+    .metric-item:last-child {
+      border-bottom: none;
+    }
+
+    .metric-name {
+      font-weight: 500;
+    }
+
+    .metric-value {
+      font-family: monospace;
+    }
+
+    .metric-bar-container {
+      height: 6px;
+      background-color: #e1e1e1;
+      border-radius: 3px;
+      margin-top: 3px;
+      overflow: hidden;
+    }
+
+    .metric-bar {
+      height: 100%;
+      background-color: #0078d7;
+    }
+
+    .toggle-button {
+      width: 100%;
+      margin-top: 5px;
+      background-color: #f0f0f0;
+      color: #333;
+      border: 1px solid #ccc;
+    }
+
+    .toggle-button:hover {
+      background-color: #e0e0e0;
+    }
+
+    .show-metrics-button {
+      margin-top: 10px;
+      font-size: 12px;
+      text-align: center;
+      color: #0078d7;
+      cursor: pointer;
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
@@ -117,6 +194,11 @@
 
   <div id="groupList" class="group-list">
     <div id="noGroups" data-i18n="noGroups">No tab groups found</div>
+  </div>
+
+  <div id="sortingMetricsContainer" class="sorting-metrics-container">
+    <h2 class="metrics-title" data-i18n="sortingMetrics">Sorting Metrics</h2>
+    <div id="sortingMetrics" class="sorting-metrics"></div>
   </div>
 
   <a href="options.html" class="settings-link" target="_blank" data-i18n="settings">Settings</a>

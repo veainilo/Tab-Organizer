@@ -298,7 +298,9 @@ async function sortTabGroups() {
       groupInfo[group.id] = {
         group: group,
         tabs: tabs,
-        score: score
+        score: score,
+        title: group.title,
+        color: group.color
       };
     }
 
@@ -323,34 +325,51 @@ async function sortTabGroups() {
 
     console.log('排序后的标签组:', sortedGroups.map(g => g.title));
 
-    // 计算每个组的新位置
-    let currentIndex = 0;
-    const groupPositions = {};
+    // 获取所有标签页
+    const allTabs = await chrome.tabs.query({ windowId: WINDOW_ID_CURRENT });
 
-    // 首先计算每个组的起始位置
-    for (const group of sortedGroups) {
-      groupPositions[group.id] = currentIndex;
-      currentIndex += groupInfo[group.id].tabs.length;
+    // 创建一个映射，记录每个标签页的组ID
+    const tabToGroupMap = {};
+    allTabs.forEach(tab => {
+      if (tab.groupId !== TAB_GROUP_ID_NONE) {
+        tabToGroupMap[tab.id] = tab.groupId;
+      }
+    });
+
+    // 临时取消所有标签页的分组
+    console.log('临时取消所有标签页的分组');
+    const groupedTabIds = allTabs
+      .filter(tab => tab.groupId !== TAB_GROUP_ID_NONE)
+      .map(tab => tab.id);
+
+    if (groupedTabIds.length > 0) {
+      await chrome.tabs.ungroup(groupedTabIds);
     }
 
-    console.log('计算的组位置:', groupPositions);
+    // 按照排序后的顺序重新创建标签组
+    console.log('按照排序后的顺序重新创建标签组');
 
-    // 从后向前移动每个组（这样可以避免位置计算错误）
-    for (let i = sortedGroups.length - 1; i >= 0; i--) {
-      const group = sortedGroups[i];
-      const tabs = groupInfo[group.id].tabs;
+    // 从前向后处理每个组
+    for (const group of sortedGroups) {
+      const info = groupInfo[group.id];
 
-      if (tabs.length === 0) {
-        console.log('组内没有标签页，跳过:', group.title);
+      // 获取属于这个组的标签页ID
+      const tabIds = info.tabs.map(tab => tab.id);
+
+      if (tabIds.length === 0) {
+        console.log('组内没有标签页，跳过:', info.title);
         continue;
       }
 
-      // 获取组内所有标签的ID
-      const tabIds = tabs.map(tab => tab.id);
+      // 创建新的标签组
+      console.log(`为 "${info.title}" 创建新的标签组，包含 ${tabIds.length} 个标签页`);
+      const newGroupId = await chrome.tabs.group({ tabIds });
 
-      // 移动整个组到新位置
-      console.log(`移动组 "${group.title}" 到位置 ${groupPositions[group.id]}`);
-      await chrome.tabs.move(tabIds, { index: groupPositions[group.id] });
+      // 设置组标题和颜色
+      await chrome.tabGroups.update(newGroupId, {
+        title: info.title,
+        color: info.color
+      });
     }
 
     console.log('标签组排序完成');

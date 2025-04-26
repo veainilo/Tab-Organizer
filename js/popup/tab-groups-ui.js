@@ -2,7 +2,7 @@
  * 标签组UI管理模块
  */
 
-import { TAB_GROUP_ID_NONE, WINDOW_ID_CURRENT, getMessage, showErrorInContainer, getGroupColorBackground, getGroupColorText } from './utils.js';
+import { TAB_GROUP_ID_NONE, WINDOW_ID_CURRENT, showErrorInContainer, getGroupColorBackground, getGroupColorText } from './utils.js';
 
 // 保存标签组展开状态的对象
 const groupExpandStates = {};
@@ -146,7 +146,7 @@ async function loadTabGroups(groupListElement, noGroupsElement) {
 
     // 添加标题行，显示排序顺序和排序控制
     const headerRow = document.createElement('div');
-    headerRow.className = 'group-header';
+    headerRow.className = 'sort-controls-header';
 
     // 创建排序方法选择器
     const sortMethodSelector = document.createElement('select');
@@ -203,10 +203,14 @@ async function loadTabGroups(groupListElement, noGroupsElement) {
       const groupItem = document.createElement('div');
       groupItem.className = 'group-item';
       groupItem.dataset.groupId = group.id;
+      groupItem.style.marginBottom = '8px';
+      groupItem.style.borderRadius = '6px';
+      groupItem.style.overflow = 'hidden';
+      groupItem.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
 
       // 创建标签组标题栏
       const groupHeader = document.createElement('div');
-      groupHeader.className = 'group-header';
+      groupHeader.className = 'group-item-header';
       groupHeader.style.backgroundColor = getGroupColorBackground(group.color);
       groupHeader.style.color = getGroupColorText(group.color);
 
@@ -214,12 +218,18 @@ async function loadTabGroups(groupListElement, noGroupsElement) {
       const expandButton = document.createElement('button');
       expandButton.className = 'expand-button';
       expandButton.dataset.groupId = group.id;
-      
+      expandButton.style.background = 'none';
+      expandButton.style.border = 'none';
+      expandButton.style.cursor = 'pointer';
+      expandButton.style.padding = '2px 5px';
+      expandButton.style.marginRight = '5px';
+      expandButton.style.fontSize = '12px';
+
       // 检查是否有保存的展开状态，如果没有则默认为折叠
-      const isExpanded = groupExpandStates[group.id] !== undefined ? 
+      const isExpanded = groupExpandStates[group.id] !== undefined ?
         groupExpandStates[group.id] : false;
       expandButton.dataset.expanded = isExpanded.toString();
-      expandButton.textContent = isExpanded ? '▼' : '►';
+      expandButton.innerHTML = isExpanded ? '&#9660;' : '&#9658;'; // 使用HTML实体代码
       expandButton.title = isExpanded ? '折叠' : '展开';
 
       // 创建标签组标题
@@ -241,10 +251,14 @@ async function loadTabGroups(groupListElement, noGroupsElement) {
       const tabList = document.createElement('div');
       tabList.className = 'tab-list';
       tabList.style.display = isExpanded ? 'block' : 'none';
+      tabList.style.backgroundColor = '#f8f9fa';
+      tabList.style.maxHeight = '300px';
+      tabList.style.overflowY = 'auto';
+      tabList.style.borderTop = '1px solid #eaeaea';
 
       // 获取组内的标签页
       const groupTabs = tabs.filter(tab => tab.groupId === group.id);
-      
+
       // 按索引排序
       groupTabs.sort((a, b) => a.index - b.index);
 
@@ -253,6 +267,11 @@ async function loadTabGroups(groupListElement, noGroupsElement) {
         const tabItem = document.createElement('div');
         tabItem.className = 'tab-item';
         tabItem.dataset.tabId = tab.id;
+        tabItem.style.display = 'flex';
+        tabItem.style.alignItems = 'center';
+        tabItem.style.padding = '8px 15px';
+        tabItem.style.borderBottom = '1px solid #eaeaea';
+        tabItem.style.cursor = 'pointer';
 
         // 创建标签图标
         const tabIcon = document.createElement('img');
@@ -284,10 +303,10 @@ async function loadTabGroups(groupListElement, noGroupsElement) {
       expandButton.addEventListener('click', () => {
         const isExpanded = expandButton.dataset.expanded === 'true';
         expandButton.dataset.expanded = (!isExpanded).toString();
-        expandButton.textContent = !isExpanded ? '▼' : '►';
+        expandButton.innerHTML = !isExpanded ? '&#9660;' : '&#9658;'; // 使用HTML实体代码
         expandButton.title = !isExpanded ? '折叠' : '展开';
         tabList.style.display = !isExpanded ? 'block' : 'none';
-        
+
         // 保存展开状态
         groupExpandStates[group.id] = !isExpanded;
       });

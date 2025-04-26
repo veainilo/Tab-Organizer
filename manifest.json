@@ -12,7 +12,7 @@
     "management"
   ],
   "background": {
-    "service_worker": "background-simple.js"
+    "service_worker": "background-improved.js"
   },
   "action": {
     "default_popup": "popup.html",

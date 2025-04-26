@@ -36,6 +36,14 @@ let settings = {
 // 可用的标签组颜色
 const baseColors = ['blue', 'red', 'yellow', 'green', 'pink', 'purple', 'cyan', 'orange', 'grey'];
 
+// 保存设置到存储
+function saveSettings() {
+  console.log('保存设置到存储:', settings);
+  chrome.storage.sync.set({ tabOrganizerSettings: settings }, () => {
+    console.log('设置已保存');
+  });
+}
+
 // Load settings when extension starts
 chrome.storage.sync.get('tabOrganizerSettings', (data) => {
   console.log('Loading settings from storage:', data);
@@ -44,6 +52,8 @@ chrome.storage.sync.get('tabOrganizerSettings', (data) => {
     console.log('Settings loaded:', settings);
   } else {
     console.log('No settings found, using defaults:', settings);
+    // 保存默认设置
+    saveSettings();
   }
 });
 
@@ -1052,6 +1062,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message.interval !== undefined && message.interval >= 1000) {
       settings.autoGroupInterval = message.interval;
 
+      // 保存设置
+      saveSettings();
+
       // 更新监控状态
       updateMonitoringStatus();
 
@@ -1110,30 +1123,38 @@ function startContinuousMonitoring() {
     autoGroupTimerId = setInterval(async () => {
       if (settings.extensionActive && !manualUngrouping) {
         console.log('执行自动监控任务');
+        console.log('当前设置状态:', {
+          autoGroupByDomain: settings.autoGroupByDomain,
+          enableGroupSorting: settings.enableGroupSorting,
+          enableTabSorting: settings.enableTabSorting
+        });
+
         try {
           // 1. 首先对标签进行分组
           if (settings.autoGroupByDomain) {
             console.log('执行自动分组');
             await groupTabsByDomain();
+          } else {
+            console.log('自动分组未启用，跳过分组步骤');
           }
 
-          // 2. 然后对标签组进行排序
-          if (settings.enableGroupSorting) {
-            console.log('执行自动标签组排序');
-            await sortTabGroups();
-          }
+          // 2. 然后对标签组进行排序 - 强制执行，确保排序生效
+          console.log('执行自动标签组排序');
+          const groupSortResult = await sortTabGroups();
+          console.log('标签组排序结果:', groupSortResult ? '成功' : '失败');
 
-          // 3. 最后对每个标签组内的标签进行排序
-          if (settings.enableTabSorting) {
-            console.log('执行自动标签组内标签排序');
+          // 3. 最后对每个标签组内的标签进行排序 - 强制执行，确保排序生效
+          console.log('执行自动标签组内标签排序');
 
-            // 获取所有标签组
-            const groups = await chrome.tabGroups.query({ windowId: WINDOW_ID_CURRENT });
+          // 获取所有标签组
+          const groups = await chrome.tabGroups.query({ windowId: WINDOW_ID_CURRENT });
+          console.log('找到', groups.length, '个标签组需要排序');
 
-            // 对每个标签组内的标签进行排序
-            for (const group of groups) {
-              await sortTabsInGroup(group.id);
-            }
+          // 对每个标签组内的标签进行排序
+          for (const group of groups) {
+            console.log('排序标签组:', group.id, group.title || '未命名组');
+            const tabSortResult = await sortTabsInGroup(group.id);
+            console.log('标签组内标签排序结果:', tabSortResult ? '成功' : '失败');
           }
 
           console.log('自动监控任务完成');

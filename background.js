@@ -423,14 +423,19 @@ async function groupTabsByDomain() {
   try {
     // Get all tabs in the current window
     const tabs = await chrome.tabs.query({ currentWindow: true });
-    console.log('查询到的标签页:', tabs);
+    console.log('查询到的标签页:', tabs.length, '个');
+
+    if (!tabs || tabs.length === 0) {
+      console.log('没有标签页，退出');
+      return true;
+    }
 
     // Group tabs by domain
     const domainGroups = {};
 
     tabs.forEach(tab => {
       if (!tab.url) {
-        console.log('标签页没有URL:', tab);
+        console.log('标签页没有URL:', tab.id);
         return;
       }
 
@@ -449,41 +454,60 @@ async function groupTabsByDomain() {
       domainGroups[domain].push(tab.id);
     });
 
-    console.log('域名分组结果:', domainGroups);
+    console.log('域名分组结果:', Object.keys(domainGroups).length, '个组');
+
+    // 检查是否有任何标签页需要分组
+    if (Object.keys(domainGroups).length === 0) {
+      console.log('没有标签页需要分组');
+      return true;
+    }
 
     // Create or update groups
     for (const domain in domainGroups) {
       const tabIds = domainGroups[domain];
-      console.log('处理域名:', domain, '标签页IDs:', tabIds);
+      console.log('处理域名:', domain, '标签页数量:', tabIds.length);
 
       // 不再跳过单个标签页，所有标签页都分组
 
       // Check if any of these tabs are already in a group with the same domain
       let existingGroupId = null;
 
-      for (const tabId of tabIds) {
-        const tab = await chrome.tabs.get(tabId);
-        if (tab.groupId && tab.groupId !== TAB_GROUP_ID_NONE) {
+      try {
+        for (const tabId of tabIds) {
           try {
-            const group = await chrome.tabGroups.get(tab.groupId);
-            console.log('标签页已在组中:', tab, '组:', group);
-            if (group.title === domain) {
-              existingGroupId = tab.groupId;
-              console.log('找到现有组:', existingGroupId);
-              break;
+            const tab = await chrome.tabs.get(tabId);
+            if (tab.groupId && tab.groupId !== TAB_GROUP_ID_NONE) {
+              try {
+                const group = await chrome.tabGroups.get(tab.groupId);
+                console.log('标签页已在组中:', tab.id, '组:', group.id, group.title);
+                if (group.title === domain) {
+                  existingGroupId = tab.groupId;
+                  console.log('找到现有组:', existingGroupId);
+                  break;
+                }
+              } catch (error) {
+                console.error('获取标签组信息失败:', error);
+              }
             }
-          } catch (error) {
-            console.error('获取标签组信息失败:', error);
+          } catch (tabError) {
+            console.error('获取标签页信息失败:', tabError);
           }
         }
-      }
 
-      // 创建或更新标签组
-      console.log('创建或更新标签组:', domain, '使用现有组ID:', existingGroupId);
-      await createOrUpdateTabGroup(tabIds, domain, existingGroupId);
+        // 创建或更新标签组
+        console.log('准备创建或更新标签组:', domain, '使用现有组ID:', existingGroupId);
+        const groupId = await createOrUpdateTabGroup(tabIds, domain, existingGroupId);
+        console.log('创建或更新标签组完成, 组ID:', groupId);
+      } catch (domainError) {
+        console.error('处理域名时出错:', domain, domainError);
+      }
     }
+
+    console.log('分组完成');
+    return true;
   } catch (error) {
     console.error('Error grouping tabs by domain:', error);
+    return false;
   }
 }
 
@@ -1126,13 +1150,34 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   if (message.action === 'groupByDomain') {
     console.log('处理 groupByDomain 消息');
+
+    // 立即发送一个初始响应，表示消息已收到
+    sendResponse({ success: true, status: 'processing' });
+
+    // 然后异步执行分组操作
     groupTabsByDomain().then(() => {
       console.log('groupByDomain 成功完成');
-      sendResponse({ success: true });
+
+      // 发送完成消息
+      chrome.runtime.sendMessage({
+        action: 'groupByDomainComplete',
+        success: true
+      }).catch(err => {
+        console.error('发送完成消息失败:', err);
+      });
     }).catch(error => {
       console.error('Error in groupByDomain:', error);
-      sendResponse({ success: false, error: error.message });
+
+      // 发送错误消息
+      chrome.runtime.sendMessage({
+        action: 'groupByDomainComplete',
+        success: false,
+        error: error.message
+      }).catch(err => {
+        console.error('发送错误消息失败:', err);
+      });
     });
+
     return true; // Indicates async response
   }
 

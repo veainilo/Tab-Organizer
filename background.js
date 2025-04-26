@@ -1,32 +1,27 @@
 // 初始化 service worker
 console.log('Edge Tab Organizer - Background Service Worker 已启动');
 
-// Helper function to get localized message
-function getMessage(messageName, substitutions) {
-  return chrome.i18n.getMessage(messageName, substitutions);
-}
-
 // 常量定义
 const WINDOW_ID_CURRENT = chrome.windows.WINDOW_ID_CURRENT;
+const TAB_GROUP_ID_NONE = -1;
 
-// Default settings
+// 标志，指示是否是用户手动取消分组
+let manualUngrouping = false;
+
+// 基本设置
 let settings = {
-  extensionActive: true,      // 插件激活开关
+  extensionActive: true,
   autoGroupByDomain: true,
   autoGroupOnCreation: true,
-  groupByRootDomain: true,  // 按根域名分组
-  ignoreTLD: true,          // 忽略顶级域名（如.com, .org等）
-  useDynamicColors: true,   // 动态分配颜色
-  enableTabSorting: true,   // 启用标签排序
-  sortingMethod: 'domain',  // 排序方法
-  sortAscending: true,      // 升序排序
-  enableGroupSorting: true, // 启用标签组排序
-  groupSortingMethod: 'smart', // 标签组排序方法
-  groupSortAscending: true, // 标签组升序排序
-  sortOnGroupCreated: true,  // 创建标签组时排序
-  sortOnGroupUpdated: true,  // 更新标签组时排序
-  sortOnTabGroupChanged: true, // 标签页组状态变化时排序
-  sortOnTabMoved: false,     // 标签页移动时排序
+  groupByRootDomain: true,
+  ignoreTLD: true,
+  useDynamicColors: true,
+  enableTabSorting: true,
+  sortingMethod: 'domain',
+  sortAscending: true,
+  enableGroupSorting: true,
+  groupSortingMethod: 'smart',
+  groupSortAscending: true,
   excludeDomains: [],
   colorScheme: {
     'default': 'blue'
@@ -68,12 +63,6 @@ baseColors.forEach(color => colorUsageCount[color] = 0);
 // 当前已分配的域名列表
 const assignedDomains = [];
 
-// 标志，指示是否是用户手动取消分组
-let manualUngrouping = false;
-
-// Define constant for ungrouped tabs
-const TAB_GROUP_ID_NONE = -1;
-
 // Load settings when extension starts
 chrome.storage.sync.get('tabOrganizerSettings', (data) => {
   console.log('Loading settings from storage:', data);
@@ -103,136 +92,20 @@ function extractDomain(url) {
   }
 }
 
-// Extract root domain from hostname
-function extractRootDomain(hostname) {
-  try {
-    // 处理 IP 地址
-    if (/^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
-      return hostname;
-    }
-
-    // 分割域名部分
-    const parts = hostname.split('.');
-
-    // 如果只有一部分，直接返回
-    if (parts.length === 1) {
-      return hostname;
-    }
-
-    // 处理常见的二级域名，如 co.uk, com.cn 等
-    const commonSecondLevelDomains = ['co', 'com', 'org', 'net', 'edu', 'gov', 'mil'];
-
-    // 如果是三部分或更多，并且倒数第二部分是常见二级域名，并且最后一部分是国家代码
-    if (parts.length >= 3 &&
-        commonSecondLevelDomains.includes(parts[parts.length - 2]) &&
-        parts[parts.length - 1].length <= 3) {
-      // 返回倒数第三部分，例如 example.co.uk 返回 example
-      return parts[parts.length - 3];
-    }
-
-    // 对于普通域名，返回倒数第二部分，例如 example.com 返回 example
-    return parts[parts.length - 2];
-  } catch (e) {
-    console.error('Error extracting root domain:', e);
-    return hostname; // 出错时返回原始域名
-  }
+// Get domain for grouping based on settings
+function getDomainForGrouping(url) {
+  return extractDomain(url);
 }
 
-// 提取主域名（如 example, google, baidu）
-function extractMainDomain(hostname) {
-  try {
-    // 处理 IP 地址
-    if (/^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
-      return hostname;
-    }
+// 为域名获取颜色
+function getColorForDomain(domain) {
+  // 简化版：使用域名的哈希值来确定颜色
+  const hash = domain.split('').reduce((acc, char) => {
+    return acc + char.charCodeAt(0);
+  }, 0);
 
-    // 分割域名部分
-    const parts = hostname.split('.');
-
-    // 如果只有一部分，直接返回
-    if (parts.length === 1) {
-      return hostname;
-    }
-
-    // 处理常见的二级域名，如 co.uk, com.cn 等
-    const commonSecondLevelDomains = ['co', 'com', 'org', 'net', 'edu', 'gov', 'mil'];
-
-    // 如果是三部分或更多，并且倒数第二部分是常见二级域名，并且最后一部分是国家代码
-    if (parts.length >= 3 &&
-        commonSecondLevelDomains.includes(parts[parts.length - 2]) &&
-        parts[parts.length - 1].length <= 3) {
-      // 返回主域名，例如 example.co.uk 返回 example
-      return parts[parts.length - 3];
-    }
-
-    // 对于普通域名，返回主域名，例如 example.com 返回 example
-    return parts[parts.length - 2];
-  } catch (e) {
-    console.error('Error extracting main domain:', e);
-    return hostname; // 出错时返回原始域名
-  }
+  return baseColors[hash % baseColors.length];
 }
-
-// 计算两个域名的相似度 (0-1)
-function calculateDomainSimilarity(domain1, domain2) {
-  // 如果域名完全相同，相似度为1
-  if (domain1 === domain2) return 1;
-
-  // 如果域名长度差异太大，相似度较低
-  const lengthDiff = Math.abs(domain1.length - domain2.length);
-  if (lengthDiff > 5) return 0.1;
-
-  // 计算最长公共子序列
-  const lcs = longestCommonSubsequence(domain1, domain2);
-  const similarity = lcs / Math.max(domain1.length, domain2.length);
-
-  return similarity;
-}
-
-// 计算两种颜色之间的视觉差异 (0-1)
-// 值越大表示颜色差异越大
-function calculateColorDifference(color1, color2) {
-  const props1 = colorProperties[color1];
-  const props2 = colorProperties[color2];
-
-  if (!props1 || !props2) return 0.5; // 默认中等差异
-
-  // 计算色调差异 (考虑色环)
-  let hueDiff = Math.abs(props1.hue - props2.hue);
-  if (hueDiff > 180) hueDiff = 360 - hueDiff;
-  hueDiff = hueDiff / 180; // 归一化到 0-1
-
-  // 计算饱和度差异
-  const satDiff = Math.abs(props1.saturation - props2.saturation);
-
-  // 计算亮度差异
-  const brightDiff = Math.abs(props1.brightness - props2.brightness);
-
-  // 综合差异 (色调差异权重更高)
-  return hueDiff * 0.6 + satDiff * 0.2 + brightDiff * 0.2;
-}
-
-// 计算最长公共子序列长度
-function longestCommonSubsequence(str1, str2) {
-  const m = str1.length;
-  const n = str2.length;
-  const dp = Array(m + 1).fill().map(() => Array(n + 1).fill(0));
-
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      if (str1[i - 1] === str2[j - 1]) {
-        dp[i][j] = dp[i - 1][j - 1] + 1;
-      } else {
-        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
-      }
-    }
-  }
-
-  return dp[m][n];
-}
-
-// 主域名到颜色的映射
-const mainDomainColorMap = {};
 
 // 标签页访问时间记录
 const tabAccessTimes = {};
@@ -248,184 +121,12 @@ const groupLastAccessTimes = {};
 // 标签组排序指标数据
 const groupSortingMetrics = {};
 
-// 为域名生成一致的颜色
-function getColorForDomain(domain) {
-  // 如果已经有缓存的颜色，直接返回
-  if (domainColorCache[domain]) {
-    return domainColorCache[domain];
-  }
-
-  // 如果用户在设置中指定了颜色，使用用户设置
-  if (settings.colorScheme[domain]) {
-    domainColorCache[domain] = settings.colorScheme[domain];
-    colorUsageCount[domainColorCache[domain]] = (colorUsageCount[domainColorCache[domain]] || 0) + 1;
-    assignedDomains.push(domain);
-    return domainColorCache[domain];
-  }
-
-  // 提取主域名
-  const mainDomain = extractMainDomain(domain);
-
-  // 如果这个主域名已经有分配的颜色，使用相同的颜色
-  if (mainDomainColorMap[mainDomain]) {
-    domainColorCache[domain] = mainDomainColorMap[mainDomain];
-    colorUsageCount[domainColorCache[domain]] = (colorUsageCount[domainColorCache[domain]] || 0) + 1;
-    assignedDomains.push(domain);
-    return domainColorCache[domain];
-  }
-
-  // 如果启用了动态颜色分配
-  if (settings.useDynamicColors) {
-    // 如果是第一个域名，使用第一个颜色
-    if (Object.keys(mainDomainColorMap).length === 0) {
-      const color = colorSequence[0];
-      mainDomainColorMap[mainDomain] = color;
-      domainColorCache[domain] = color;
-      colorUsageCount[color] = (colorUsageCount[color] || 0) + 1;
-      assignedDomains.push(domain);
-      return color;
-    }
-
-    // 收集当前使用的颜色及其对应的域名
-    const usedColors = {};
-    const domainsByColor = {};
-
-    for (const existingDomain of assignedDomains) {
-      const existingColor = domainColorCache[existingDomain];
-      usedColors[existingColor] = true;
-
-      if (!domainsByColor[existingColor]) {
-        domainsByColor[existingColor] = [];
-      }
-      domainsByColor[existingColor].push(existingDomain);
-    }
-
-    // 计算与现有域名的相似度
-    const domainSimilarities = {};
-    for (const existingDomain of assignedDomains) {
-      domainSimilarities[existingDomain] = calculateDomainSimilarity(domain, existingDomain);
-    }
-
-    // 为每种颜色计算一个适合度分数
-    // 分数越高越好（我们想要选择与相似域名颜色差异最大的颜色）
-    const colorScores = {};
-
-    for (const color of baseColors) {
-      // 初始分数
-      colorScores[color] = 10.0;
-
-      // 减去使用频率惩罚 (使用次数越多，分数越低)
-      colorScores[color] -= (colorUsageCount[color] || 0) * 1.5;
-
-      // 对于每个使用此颜色的域名
-      if (domainsByColor[color]) {
-        for (const existingDomain of domainsByColor[color]) {
-          // 如果新域名与使用此颜色的域名相似，降低此颜色的分数
-          const similarity = domainSimilarities[existingDomain];
-          colorScores[color] -= similarity * 5.0;
-        }
-      }
-
-      // 对于每种已使用的颜色，计算颜色差异奖励
-      for (const usedColor in usedColors) {
-        if (color !== usedColor) {
-          // 颜色差异越大，奖励越高
-          const colorDiff = calculateColorDifference(color, usedColor);
-
-          // 找出使用此颜色的最相似域名
-          let maxSimilarity = 0;
-          if (domainsByColor[usedColor]) {
-            for (const existingDomain of domainsByColor[usedColor]) {
-              maxSimilarity = Math.max(maxSimilarity, domainSimilarities[existingDomain]);
-            }
-          }
-
-          // 如果有相似的域名使用了某种颜色，我们希望新域名使用与该颜色差异大的颜色
-          colorScores[color] += colorDiff * maxSimilarity * 3.0;
-        }
-      }
-    }
-
-    // 选择分数最高的颜色
-    let bestColor = baseColors[0];
-    let highestScore = colorScores[bestColor];
-
-    for (const color of baseColors) {
-      if (colorScores[color] > highestScore) {
-        highestScore = colorScores[color];
-        bestColor = color;
-      }
-    }
-
-    // 如果是前几个域名，尝试按照预设的颜色序列分配
-    if (assignedDomains.length < colorSequence.length) {
-      const sequenceColor = colorSequence[assignedDomains.length];
-
-      // 如果序列颜色的分数不是太低，使用它
-      if (colorScores[sequenceColor] > highestScore * 0.8) {
-        bestColor = sequenceColor;
-      }
-    }
-
-    // 保存结果并更新计数
-    mainDomainColorMap[mainDomain] = bestColor; // 保存主域名到颜色的映射
-    domainColorCache[domain] = bestColor;
-    colorUsageCount[bestColor] += 1;
-    assignedDomains.push(domain);
-
-    return bestColor;
-  }
-
-  // 默认返回蓝色
-  return settings.colorScheme['default'] || 'blue';
-}
-
-// Get domain for grouping based on settings
-function getDomainForGrouping(url) {
-  const fullDomain = extractDomain(url);
-  if (!fullDomain) return '';
-
-  // 如果同时启用了按根域名分组和忽略顶级域名
-  if (settings.groupByRootDomain && settings.ignoreTLD) {
-    return extractRootDomain(fullDomain);
-  }
-  // 如果只启用了按根域名分组
-  else if (settings.groupByRootDomain) {
-    // 分割域名部分
-    const parts = fullDomain.split('.');
-
-    // 处理常见的二级域名，如 co.uk, com.cn 等
-    const commonSecondLevelDomains = ['co', 'com', 'org', 'net', 'edu', 'gov', 'mil'];
-
-    if (parts.length > 2 &&
-        commonSecondLevelDomains.includes(parts[parts.length - 2]) &&
-        parts[parts.length - 1].length <= 3) {
-      // 对于 example.co.uk 这样的情况，返回 example.co.uk
-      if (parts.length === 3) {
-        return fullDomain;
-      }
-      // 对于 sub.example.co.uk 这样的情况，返回 example.co.uk
-      return parts.slice(-3).join('.');
-    }
-
-    // 对于普通域名，返回最后两部分，如 example.com
-    if (parts.length > 1) {
-      return parts.slice(-2).join('.');
-    }
-
-    return fullDomain;
-  }
-  // 如果都没启用，返回完整域名
-  else {
-    return fullDomain;
-  }
-}
-
-// Group tabs by domain
+// 按域名分组标签页
 async function groupTabsByDomain() {
   console.log('开始按域名分组标签页');
+
   try {
-    // Get all tabs in the current window
+    // 获取当前窗口的所有标签页
     const tabs = await chrome.tabs.query({ currentWindow: true });
     console.log('查询到的标签页:', tabs.length, '个');
 
@@ -434,77 +135,40 @@ async function groupTabsByDomain() {
       return true;
     }
 
-    // Group tabs by domain
+    // 按域名分组
     const domainGroups = {};
 
-    tabs.forEach(tab => {
-      if (!tab.url) {
-        console.log('标签页没有URL:', tab.id);
-        return;
-      }
+    for (const tab of tabs) {
+      if (!tab.url) continue;
 
       const domain = getDomainForGrouping(tab.url);
-      console.log('标签页域名:', tab.url, '-> 分组域名:', domain);
-
-      if (!domain || settings.excludeDomains.includes(domain)) {
-        console.log('域名为空或被排除:', domain);
-        return;
-      }
+      if (!domain || settings.excludeDomains.includes(domain)) continue;
 
       if (!domainGroups[domain]) {
         domainGroups[domain] = [];
       }
 
       domainGroups[domain].push(tab.id);
-    });
+    }
 
     console.log('域名分组结果:', Object.keys(domainGroups).length, '个组');
 
-    // 检查是否有任何标签页需要分组
-    if (Object.keys(domainGroups).length === 0) {
-      console.log('没有标签页需要分组');
-      return true;
-    }
-
-    // Create or update groups
+    // 创建标签组
     for (const domain in domainGroups) {
       const tabIds = domainGroups[domain];
       console.log('处理域名:', domain, '标签页数量:', tabIds.length);
 
-      // 不再跳过单个标签页，所有标签页都分组
+      // 创建新组
+      const groupId = await chrome.tabs.group({ tabIds });
+      console.log('新组创建成功，ID:', groupId);
 
-      // Check if any of these tabs are already in a group with the same domain
-      let existingGroupId = null;
-
-      try {
-        for (const tabId of tabIds) {
-          try {
-            const tab = await chrome.tabs.get(tabId);
-            if (tab.groupId && tab.groupId !== TAB_GROUP_ID_NONE) {
-              try {
-                const group = await chrome.tabGroups.get(tab.groupId);
-                console.log('标签页已在组中:', tab.id, '组:', group.id, group.title);
-                if (group.title === domain) {
-                  existingGroupId = tab.groupId;
-                  console.log('找到现有组:', existingGroupId);
-                  break;
-                }
-              } catch (error) {
-                console.error('获取标签组信息失败:', error);
-              }
-            }
-          } catch (tabError) {
-            console.error('获取标签页信息失败:', tabError);
-          }
-        }
-
-        // 创建或更新标签组
-        console.log('准备创建或更新标签组:', domain, '使用现有组ID:', existingGroupId);
-        const groupId = await createOrUpdateTabGroup(tabIds, domain, existingGroupId);
-        console.log('创建或更新标签组完成, 组ID:', groupId);
-      } catch (domainError) {
-        console.error('处理域名时出错:', domain, domainError);
-      }
+      // 设置组标题和颜色
+      const color = getColorForDomain(domain);
+      await chrome.tabGroups.update(groupId, {
+        title: domain,
+        color: color
+      });
+      console.log('组标题和颜色已设置');
     }
 
     console.log('分组完成');
@@ -552,34 +216,17 @@ chrome.tabs.onCreated.addListener(async (tab) => {
         return;
       }
 
-      // Find existing group with this domain
-      const tabs = await chrome.tabs.query({ currentWindow: true });
-      let existingGroupId = null;
+      // 创建新组
+      const groupId = await chrome.tabs.group({ tabIds: [tab.id] });
+      console.log('新组创建成功，ID:', groupId);
 
-      for (const t of tabs) {
-        if (t.id === tab.id) continue;
-        if (t.groupId && t.groupId !== TAB_GROUP_ID_NONE) {
-          const group = await chrome.tabGroups.get(t.groupId);
-          if (group.title === domain) {
-            existingGroupId = t.groupId;
-            break;
-          }
-        }
-      }
-
-      // Check if there are other tabs with the same domain
-      const sameDomainTabs = tabs.filter(t =>
-        t.id !== tab.id &&
-        t.url &&
-        getDomainForGrouping(t.url) === domain
-      );
-
-      // 即使没有其他相同域名的标签页，也创建组
-      const tabIds = sameDomainTabs.length > 0 ?
-        [tab.id, ...sameDomainTabs.map(t => t.id)] : [tab.id];
-
-      // 创建或更新标签组
-      await createOrUpdateTabGroup(tabIds, domain, existingGroupId);
+      // 设置组标题和颜色
+      const color = getColorForDomain(domain);
+      await chrome.tabGroups.update(groupId, {
+        title: domain,
+        color: color
+      });
+      console.log('组标题和颜色已设置');
     } catch (error) {
       console.error('Error handling new tab:', error);
     }
@@ -607,42 +254,22 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
         return;
       }
 
-      // Find existing group with this domain
-      const tabs = await chrome.tabs.query({ currentWindow: true });
-      let existingGroupId = null;
-
-      for (const t of tabs) {
-        if (t.id === tabId) continue;
-        if (t.groupId && t.groupId !== TAB_GROUP_ID_NONE) {
-          const group = await chrome.tabGroups.get(t.groupId);
-          if (group.title === domain) {
-            existingGroupId = t.groupId;
-            break;
-          }
-        }
-      }
-
-      // If tab is already in the correct group, do nothing
-      if (tab.groupId === existingGroupId) return;
-
-      // If tab is in a different group, remove it
+      // If tab is in a group, remove it
       if (tab.groupId && tab.groupId !== TAB_GROUP_ID_NONE) {
         await chrome.tabs.ungroup(tabId);
       }
 
-      // Check if there are other tabs with the same domain
-      const sameDomainTabs = tabs.filter(t =>
-        t.id !== tabId &&
-        t.url &&
-        getDomainForGrouping(t.url) === domain
-      );
+      // 创建新组
+      const groupId = await chrome.tabs.group({ tabIds: [tabId] });
+      console.log('新组创建成功，ID:', groupId);
 
-      // 即使没有其他相同域名的标签页，也创建组
-      const tabIds = sameDomainTabs.length > 0 ?
-        [tabId, ...sameDomainTabs.map(t => t.id)] : [tabId];
-
-      // 创建或更新标签组
-      await createOrUpdateTabGroup(tabIds, domain, existingGroupId);
+      // 设置组标题和颜色
+      const color = getColorForDomain(domain);
+      await chrome.tabGroups.update(groupId, {
+        title: domain,
+        color: color
+      });
+      console.log('组标题和颜色已设置');
     } catch (error) {
       console.error('Error handling tab update:', error);
     }
@@ -808,12 +435,6 @@ async function createOrUpdateTabGroup(tabIds, domain, existingGroupId = null) {
         color: color
       });
       console.log('组标题和颜色已设置');
-    }
-
-    // 如果启用了标签排序，对组内标签进行排序
-    if (settings.enableTabSorting) {
-      console.log('对组内标签进行排序, 组ID:', groupId);
-      await sortTabsInGroup(groupId);
     }
 
     console.log('标签组创建/更新成功, ID:', groupId);
@@ -1412,4 +1033,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     });
     return true;
   }
+
+  // 未知消息
+  console.warn('收到未知消息:', message);
+  sendResponse({ success: false, error: 'Unknown action' });
+  return true;
 });
+
+// 输出初始化完成消息
+console.log('Edge Tab Organizer - Background Service Worker 初始化完成');

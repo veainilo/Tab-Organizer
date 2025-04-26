@@ -77,6 +77,28 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // 监听来自 background 的消息
+  chrome.runtime.onMessage.addListener((message, _sender, _sendResponse) => {
+    console.log('收到来自 background 的消息:', message);
+
+    // 处理分组完成消息
+    if (message.action === 'groupByDomainComplete') {
+      console.log('分组操作完成:', message);
+
+      if (message.success) {
+        showStatus(getMessage('tabsGrouped'), 'success');
+        loadTabGroups();
+      } else {
+        const errorMsg = message.error || 'Unknown error';
+        console.error('分组标签页失败:', errorMsg);
+        showStatus(getMessage('errorGroupingTabs', [errorMsg]), 'error');
+      }
+    }
+
+    // 必须返回 true 以保持消息通道开放
+    return true;
+  });
+
   // 更新插件激活状态文本
   function updateExtensionActiveStatus(isActive) {
     extensionActiveStatus.textContent = isActive ? '插件已激活' : '插件已停用';
@@ -102,12 +124,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Add event listeners
   groupByDomainButton.addEventListener('click', () => {
-    console.log('按域名分组按钮被点击');
+    console.log('按域名分组按钮被点击 - 开始处理');
     showStatus(getMessage('groupingTabs'), 'info');
 
     try {
+      console.log('准备发送 groupByDomain 消息');
       chrome.runtime.sendMessage({ action: 'groupByDomain' }, (response) => {
-        console.log('groupByDomain 响应:', response);
+        console.log('groupByDomain 初始响应收到:', response);
 
         if (chrome.runtime.lastError) {
           console.error('发送 groupByDomain 消息失败:', chrome.runtime.lastError);
@@ -116,14 +139,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (response && response.success) {
-          showStatus(getMessage('tabsGrouped'), 'success');
-          loadTabGroups();
+          if (response.status === 'processing') {
+            console.log('分组操作正在处理中，等待完成消息...');
+            // 不需要做任何事情，等待 background 发送完成消息
+          } else {
+            console.log('分组立即完成，刷新标签组列表');
+            showStatus(getMessage('tabsGrouped'), 'success');
+            loadTabGroups();
+          }
         } else {
           const errorMsg = response ? response.error : 'No response';
           console.error('分组标签页失败:', errorMsg);
           showStatus(getMessage('errorGroupingTabs', [errorMsg || 'Unknown error']), 'error');
         }
       });
+      console.log('groupByDomain 消息已发送，等待响应');
     } catch (error) {
       console.error('发送 groupByDomain 消息时出错:', error);
       showStatus(getMessage('errorGroupingTabs', [error.message || 'Unknown error']), 'error');

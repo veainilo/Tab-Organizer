@@ -1,6 +1,12 @@
 // 测试 background.js 是否正确加载和响应消息
 console.log('测试脚本已加载');
 
+// 添加全局消息监听器，用于调试
+chrome.runtime.onMessage.addListener((message, _sender, _sendResponse) => {
+  console.log('全局消息监听器收到消息:', message);
+  return true; // 保持消息通道开放
+});
+
 // 等待 DOM 加载完成
 document.addEventListener('DOMContentLoaded', function() {
   console.log('DOM 已加载，设置测试按钮事件');
@@ -65,16 +71,38 @@ window.testBackgroundConnection = function() {
 // 测试 groupByDomain 功能
 window.testGroupByDomain = function() {
   console.log('测试 groupByDomain 功能');
+
+  // 监听来自 background 的消息
+  const messageListener = function(message, _sender, _sendResponse) {
+    if (message.action === 'groupByDomainComplete') {
+      console.log('收到 groupByDomainComplete 消息:', message);
+      // 移除监听器，避免重复处理
+      chrome.runtime.onMessage.removeListener(messageListener);
+    }
+    return true;
+  };
+
+  // 添加消息监听器
+  chrome.runtime.onMessage.addListener(messageListener);
+
   try {
     chrome.runtime.sendMessage({ action: 'groupByDomain' }, (response) => {
       if (chrome.runtime.lastError) {
         console.error('发送 groupByDomain 消息失败:', chrome.runtime.lastError);
+        // 出错时移除监听器
+        chrome.runtime.onMessage.removeListener(messageListener);
       } else {
-        console.log('groupByDomain 响应:', response);
+        console.log('groupByDomain 初始响应:', response);
+        if (response && response.success && response.status !== 'processing') {
+          // 如果立即完成，移除监听器
+          chrome.runtime.onMessage.removeListener(messageListener);
+        }
       }
     });
   } catch (error) {
     console.error('发送 groupByDomain 消息时出错:', error);
+    // 出错时移除监听器
+    chrome.runtime.onMessage.removeListener(messageListener);
   }
 };
 

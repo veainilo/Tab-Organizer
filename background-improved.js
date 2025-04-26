@@ -184,7 +184,8 @@ function getColorForDomain(domain) {
 
 // 按域名分组标签页
 async function groupTabsByDomain() {
-  console.log('开始按域名分组标签页');
+  console.log('开始按域名分组标签页 - 函数开始执行');
+  console.log('当前设置:', settings);
   try {
     // 获取当前窗口的所有标签页
     const tabs = await chrome.tabs.query({ currentWindow: true });
@@ -202,8 +203,14 @@ async function groupTabsByDomain() {
       const domain = getDomainForGrouping(tab.url);
       console.log('标签页域名:', tab.url, '-> 分组域名:', domain);
 
-      if (!domain || settings.excludeDomains.includes(domain)) {
-        console.log('域名为空或被排除:', domain);
+      // 检查域名是否为空或被排除
+      if (!domain) {
+        console.log('域名为空，跳过:', tab.url);
+        return;
+      }
+
+      if (settings.excludeDomains && settings.excludeDomains.includes(domain)) {
+        console.log('域名被排除，跳过:', domain);
         return;
       }
 
@@ -215,6 +222,12 @@ async function groupTabsByDomain() {
     });
 
     console.log('域名分组结果:', domainGroups);
+
+    // 检查是否有任何标签页需要分组
+    if (Object.keys(domainGroups).length === 0) {
+      console.log('没有标签页需要分组');
+      return true;
+    }
 
     // 创建或更新标签组
     for (const domain in domainGroups) {
@@ -245,7 +258,8 @@ async function groupTabsByDomain() {
 
       // 创建或更新标签组
       console.log('创建或更新标签组:', domain, '使用现有组ID:', existingGroupId);
-      await createOrUpdateTabGroup(tabIds, domain, existingGroupId);
+      const groupId = await createOrUpdateTabGroup(tabIds, domain, existingGroupId);
+      console.log('创建或更新标签组完成, 组ID:', groupId);
     }
 
     return true;
@@ -258,6 +272,13 @@ async function groupTabsByDomain() {
 // 创建或更新标签组，并应用排序
 async function createOrUpdateTabGroup(tabIds, domain, existingGroupId = null) {
   console.log('创建或更新标签组 - 标签IDs:', tabIds, '标题:', domain, '现有组ID:', existingGroupId);
+
+  // 检查 tabIds 是否为空
+  if (!tabIds || tabIds.length === 0) {
+    console.error('Error: tabIds is empty or null');
+    return null;
+  }
+
   try {
     let groupId;
 
@@ -690,14 +711,38 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   // 按域名分组标签页
   if (message.action === 'groupByDomain') {
-    console.log('处理 groupByDomain 消息');
-    groupTabsByDomain().then(success => {
-      console.log('groupByDomain 执行结果:', success);
-      sendResponse({ success });
-    }).catch(error => {
-      console.error('Error in groupByDomain:', error);
-      sendResponse({ success: false, error: error.message });
-    });
+    console.log('处理 groupByDomain 消息 - 开始');
+
+    // 立即发送一个初始响应，表示消息已收到
+    sendResponse({ success: true, status: 'processing' });
+
+    // 然后异步执行分组操作
+    setTimeout(async () => {
+      try {
+        console.log('开始执行 groupTabsByDomain 函数');
+        const result = await groupTabsByDomain();
+        console.log('groupTabsByDomain 执行完成，结果:', result);
+
+        // 由于我们已经发送了响应，这里不需要再次发送
+        // 如果需要通知前端操作完成，可以使用 chrome.runtime.sendMessage
+        chrome.runtime.sendMessage({
+          action: 'groupByDomainComplete',
+          success: true
+        }).catch(err => {
+          console.error('发送完成消息失败:', err);
+        });
+      } catch (error) {
+        console.error('执行 groupTabsByDomain 时出错:', error);
+        chrome.runtime.sendMessage({
+          action: 'groupByDomainComplete',
+          success: false,
+          error: error.message
+        }).catch(err => {
+          console.error('发送错误消息失败:', err);
+        });
+      }
+    }, 0);
+
     return true;
   }
 

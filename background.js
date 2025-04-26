@@ -17,10 +17,26 @@ let settings = {
 };
 
 // 可用的标签组颜色
-const availableColors = ['blue', 'red', 'yellow', 'green', 'pink', 'purple', 'cyan', 'orange', 'grey'];
+// Edge 浏览器支持的标签组颜色
+const baseColors = ['blue', 'red', 'yellow', 'green', 'pink', 'purple', 'cyan', 'orange', 'grey'];
+
+// 用于智能分配的颜色序列
+// 这个顺序经过精心设计，确保相邻颜色有足够的视觉差异
+const colorSequence = [
+  'blue', 'red', 'green', 'orange', 'purple',
+  'cyan', 'pink', 'yellow', 'grey'
+];
 
 // 域名到颜色的映射缓存
 const domainColorCache = {};
+
+// 已分配的颜色计数
+const colorUsageCount = {};
+// 初始化颜色使用计数
+baseColors.forEach(color => colorUsageCount[color] = 0);
+
+// 当前已分配的域名列表
+const assignedDomains = [];
 
 // Define constant for ungrouped tabs
 const TAB_GROUP_ID_NONE = -1;
@@ -85,6 +101,41 @@ function extractRootDomain(hostname) {
   }
 }
 
+// 计算两个域名的相似度 (0-1)
+function calculateDomainSimilarity(domain1, domain2) {
+  // 如果域名完全相同，相似度为1
+  if (domain1 === domain2) return 1;
+
+  // 如果域名长度差异太大，相似度较低
+  const lengthDiff = Math.abs(domain1.length - domain2.length);
+  if (lengthDiff > 5) return 0.1;
+
+  // 计算最长公共子序列
+  const lcs = longestCommonSubsequence(domain1, domain2);
+  const similarity = lcs / Math.max(domain1.length, domain2.length);
+
+  return similarity;
+}
+
+// 计算最长公共子序列长度
+function longestCommonSubsequence(str1, str2) {
+  const m = str1.length;
+  const n = str2.length;
+  const dp = Array(m + 1).fill().map(() => Array(n + 1).fill(0));
+
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      if (str1[i - 1] === str2[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1] + 1;
+      } else {
+        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+      }
+    }
+  }
+
+  return dp[m][n];
+}
+
 // 为域名生成一致的颜色
 function getColorForDomain(domain) {
   // 如果已经有缓存的颜色，直接返回
@@ -95,22 +146,76 @@ function getColorForDomain(domain) {
   // 如果用户在设置中指定了颜色，使用用户设置
   if (settings.colorScheme[domain]) {
     domainColorCache[domain] = settings.colorScheme[domain];
+    colorUsageCount[domainColorCache[domain]] = (colorUsageCount[domainColorCache[domain]] || 0) + 1;
+    assignedDomains.push(domain);
     return domainColorCache[domain];
   }
 
   // 如果启用了动态颜色分配
   if (settings.useDynamicColors) {
-    // 使用简单的哈希函数为域名生成一个数字
-    let hash = 0;
-    for (let i = 0; i < domain.length; i++) {
-      hash = ((hash << 5) - hash) + domain.charCodeAt(i);
-      hash |= 0; // 转换为32位整数
+    // 如果是第一个域名，使用第一个颜色
+    if (assignedDomains.length === 0) {
+      domainColorCache[domain] = colorSequence[0];
+      colorUsageCount[colorSequence[0]] += 1;
+      assignedDomains.push(domain);
+      return domainColorCache[domain];
     }
 
-    // 使用哈希值选择一个颜色
-    const colorIndex = Math.abs(hash) % availableColors.length;
-    domainColorCache[domain] = availableColors[colorIndex];
-    return domainColorCache[domain];
+    // 计算与现有域名的相似度
+    const similarityScores = {};
+    for (const existingDomain of assignedDomains) {
+      const similarity = calculateDomainSimilarity(domain, existingDomain);
+      const existingColor = domainColorCache[existingDomain];
+
+      if (!similarityScores[existingColor]) {
+        similarityScores[existingColor] = 0;
+      }
+
+      // 相似度越高，分数越高
+      similarityScores[existingColor] += similarity;
+    }
+
+    // 为每种颜色计算一个总分数
+    // 分数越低越好（我们想要选择与现有域名最不相似的颜色）
+    const colorScores = {};
+    for (const color of baseColors) {
+      // 基础分数：颜色使用次数
+      colorScores[color] = colorUsageCount[color] * 2;
+
+      // 加上相似度分数
+      if (similarityScores[color]) {
+        colorScores[color] += similarityScores[color] * 10;
+      }
+    }
+
+    // 选择分数最低的颜色
+    let bestColor = baseColors[0];
+    let lowestScore = colorScores[bestColor];
+
+    for (const color of baseColors) {
+      if (colorScores[color] < lowestScore) {
+        lowestScore = colorScores[color];
+        bestColor = color;
+      }
+    }
+
+    // 如果所有颜色都已使用，尝试使用颜色序列中的下一个
+    if (assignedDomains.length < colorSequence.length && colorUsageCount[bestColor] > 0) {
+      const nextColorIndex = assignedDomains.length % colorSequence.length;
+      const nextColor = colorSequence[nextColorIndex];
+
+      // 如果下一个颜色的分数不是太高，使用它
+      if (colorScores[nextColor] - lowestScore < 5) {
+        bestColor = nextColor;
+      }
+    }
+
+    // 保存结果并更新计数
+    domainColorCache[domain] = bestColor;
+    colorUsageCount[bestColor] += 1;
+    assignedDomains.push(domain);
+
+    return bestColor;
   }
 
   // 默认返回蓝色
@@ -351,7 +456,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 });
 
 // Listen for messages from popup or options page
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message.action === 'groupByDomain') {
     groupTabsByDomain().then(() => {
       sendResponse({ success: true });

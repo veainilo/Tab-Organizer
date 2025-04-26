@@ -10,7 +10,7 @@ let manualUngrouping = false;
 
 // 基本设置
 let settings = {
-  extensionActive: true,
+  extensionActive: true,          // 默认激活状态
   autoGroupByDomain: true,
   autoGroupOnCreation: true,
   groupByRootDomain: true,
@@ -269,10 +269,13 @@ async function sortTabGroups() {
     const groups = await chrome.tabGroups.query({ windowId: WINDOW_ID_CURRENT });
     console.log('查询到的标签组:', groups.length, '个');
 
-    if (!groups || groups.length <= 1) {
-      console.log('标签组数量不足，无需排序');
+    if (!groups || groups.length === 0) {
+      console.log('没有标签组，无需排序');
       return true;
     }
+
+    // 即使只有一个标签组，也需要对组内标签进行排序
+    console.log('对标签组进行排序，包括组内标签');
 
     // 获取每个组的信息，包括组内标签页和排序分数
     const groupInfo = {};
@@ -445,6 +448,92 @@ async function sortTabGroups() {
     return true;
   } catch (error) {
     console.error('Error sorting tab groups:', error);
+    return false;
+  }
+}
+
+// 对单个标签组内的标签进行排序
+async function sortTabsInGroup(groupId) {
+  console.log(`开始对标签组 ${groupId} 内的标签进行排序`);
+
+  try {
+    // 获取组内所有标签
+    const tabs = await chrome.tabs.query({ groupId: groupId });
+    console.log(`标签组 ${groupId} 内有 ${tabs.length} 个标签`);
+
+    if (!tabs || tabs.length <= 1) {
+      console.log('标签数量不足，无需排序');
+      return true;
+    }
+
+    // 计算每个标签的排序分数
+    const tabScores = {};
+    for (const tab of tabs) {
+      let score;
+
+      if (settings.sortingMethod === 'title') {
+        // 按标题排序
+        score = tab.title || '';
+      } else if (settings.sortingMethod === 'domain') {
+        // 按域名排序
+        score = extractDomain(tab.url || '');
+      } else if (settings.sortingMethod === 'smart') {
+        // 智能排序（结合多个因素）
+        const accessScore = Math.random(); // 模拟访问时间分数
+        const urlScore = tab.url ? Math.min(tab.url.length / 100, 1) : 0; // URL长度分数
+        const titleScore = tab.title ? Math.min(tab.title.length / 50, 1) : 0; // 标题长度分数
+
+        // 加权平均
+        score = (accessScore * 0.5) + (urlScore * 0.3) + (titleScore * 0.2);
+      } else {
+        // 默认按索引排序
+        score = tab.index;
+      }
+
+      tabScores[tab.id] = score;
+    }
+
+    // 根据分数对标签页进行排序
+    tabs.sort((a, b) => {
+      const scoreA = tabScores[a.id];
+      const scoreB = tabScores[b.id];
+
+      if (typeof scoreA === 'string' && typeof scoreB === 'string') {
+        // 字符串比较
+        return settings.sortAscending ?
+          scoreA.localeCompare(scoreB) :
+          scoreB.localeCompare(scoreA);
+      } else {
+        // 数值比较
+        return settings.sortAscending ?
+          scoreA - scoreB :
+          scoreB - scoreA;
+      }
+    });
+
+    // 移动标签到新位置
+    for (let i = 0; i < tabs.length; i++) {
+      try {
+        await chrome.tabs.move(tabs[i].id, { index: -1 }); // 移动到最后
+      } catch (error) {
+        console.error(`移动标签页 ${tabs[i].id} 失败:`, error);
+      }
+    }
+
+    // 按照排序后的顺序重新移动标签
+    let baseIndex = tabs[0].index; // 获取第一个标签的索引作为基准
+    for (let i = 0; i < tabs.length; i++) {
+      try {
+        await chrome.tabs.move(tabs[i].id, { index: baseIndex + i });
+      } catch (error) {
+        console.error(`移动标签页 ${tabs[i].id} 失败:`, error);
+      }
+    }
+
+    console.log(`标签组 ${groupId} 内的标签排序完成`);
+    return true;
+  } catch (error) {
+    console.error(`对标签组 ${groupId} 内的标签进行排序失败:`, error);
     return false;
   }
 }
@@ -804,6 +893,25 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       sendResponse({ success });
     }).catch(error => {
       console.error('Error in sortTabGroups:', error);
+      sendResponse({ success: false, error: error.message });
+    });
+    return true;
+  }
+
+  // 对单个标签组内的标签排序
+  if (message.action === 'sortTabsInGroup') {
+    console.log('处理 sortTabsInGroup 消息');
+    if (!message.groupId) {
+      console.error('缺少 groupId 参数');
+      sendResponse({ success: false, error: 'Missing groupId parameter' });
+      return true;
+    }
+
+    sortTabsInGroup(message.groupId).then(success => {
+      console.log('sortTabsInGroup 执行结果:', success);
+      sendResponse({ success });
+    }).catch(error => {
+      console.error('Error in sortTabsInGroup:', error);
       sendResponse({ success: false, error: error.message });
     });
     return true;

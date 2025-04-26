@@ -805,9 +805,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       });
 
+      // 创建排序所有按钮
+      const sortAllButton = document.createElement('button');
+      sortAllButton.className = 'quick-action-button';
+      sortAllButton.title = '排序所有标签组';
+      sortAllButton.innerHTML = '&#128260; 排序所有';
+      sortAllButton.addEventListener('click', () => {
+        sortAllTabGroups();
+      });
+
       // 添加按钮到快速操作行
       quickActionsRow.appendChild(expandAllButton);
       quickActionsRow.appendChild(collapseAllButton);
+      quickActionsRow.appendChild(sortAllButton);
 
       // 添加标题行、排序控制行和快速操作行
       groupListElement.appendChild(headerRow);
@@ -897,7 +907,27 @@ document.addEventListener('DOMContentLoaded', () => {
         sortButton.innerHTML = '&#128260;'; // 排序图标
         sortButton.addEventListener('click', (e) => {
           e.stopPropagation(); // 阻止事件冒泡
-          sortTabGroup(group.id);
+
+          // 显示排序中的提示
+          sortButton.disabled = true;
+          sortButton.innerHTML = '&#8987;'; // 沙漏图标
+
+          // 调用后台脚本排序标签组内的标签
+          chrome.runtime.sendMessage({
+            action: 'sortTabsInGroup',
+            groupId: group.id
+          }, (response) => {
+            // 恢复按钮状态
+            sortButton.disabled = false;
+            sortButton.innerHTML = '&#128260;'; // 排序图标
+
+            if (response && response.success) {
+              // 排序成功，重新加载标签组列表
+              loadTabGroups();
+            } else {
+              console.error('排序标签失败:', response ? response.error : '未知错误');
+            }
+          });
         });
         actionsContainer.appendChild(sortButton);
 
@@ -1140,13 +1170,12 @@ document.addEventListener('DOMContentLoaded', () => {
         groupListElement.appendChild(groupItem);
       });
 
-      // 辅助函数：排序特定标签组
-      async function sortTabGroup(groupId) {
+      // 辅助函数：排序所有标签组
+      async function sortAllTabGroups() {
         try {
-          showStatus('正在排序标签组...', 'info');
+          showStatus('正在排序所有标签组...', 'info');
           const response = await chrome.runtime.sendMessage({
-            action: 'sortTabGroup',
-            groupId: groupId
+            action: 'sortTabGroups'
           });
 
           if (response && response.success) {

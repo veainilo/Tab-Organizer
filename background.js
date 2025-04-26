@@ -2,7 +2,8 @@
 let settings = {
   autoGroupByDomain: true,
   autoGroupOnCreation: true,
-  groupByRootDomain: true,  // 新增：按根域名分组
+  groupByRootDomain: true,  // 按根域名分组
+  ignoreTLD: true,          // 忽略顶级域名（如.com, .org等）
   excludeDomains: [],
   colorScheme: {
     'default': 'blue'
@@ -48,27 +49,24 @@ function extractRootDomain(hostname) {
     // 分割域名部分
     const parts = hostname.split('.');
 
-    // 如果只有两部分（如 example.com），直接返回
-    if (parts.length <= 2) {
+    // 如果只有一部分，直接返回
+    if (parts.length === 1) {
       return hostname;
     }
 
     // 处理常见的二级域名，如 co.uk, com.cn 等
     const commonSecondLevelDomains = ['co', 'com', 'org', 'net', 'edu', 'gov', 'mil'];
-    const secondLevelDomain = parts[parts.length - 2];
-    const topLevelDomain = parts[parts.length - 1];
 
-    if (parts.length > 2 && commonSecondLevelDomains.includes(secondLevelDomain) && topLevelDomain.length <= 3) {
-      // 对于 example.co.uk 这样的情况，返回 example.co.uk
-      if (parts.length === 3) {
-        return hostname;
-      }
-      // 对于 sub.example.co.uk 这样的情况，返回 example.co.uk
-      return parts.slice(-3).join('.');
+    // 如果是三部分或更多，并且倒数第二部分是常见二级域名，并且最后一部分是国家代码
+    if (parts.length >= 3 &&
+        commonSecondLevelDomains.includes(parts[parts.length - 2]) &&
+        parts[parts.length - 1].length <= 3) {
+      // 返回倒数第三部分，例如 example.co.uk 返回 example
+      return parts[parts.length - 3];
     }
 
-    // 对于普通域名，返回最后两部分，如 example.com
-    return parts.slice(-2).join('.');
+    // 对于普通域名，返回倒数第二部分，例如 example.com 返回 example
+    return parts[parts.length - 2];
   } catch (e) {
     console.error('Error extracting root domain:', e);
     return hostname; // 出错时返回原始域名
@@ -80,9 +78,38 @@ function getDomainForGrouping(url) {
   const fullDomain = extractDomain(url);
   if (!fullDomain) return '';
 
-  if (settings.groupByRootDomain) {
+  // 如果同时启用了按根域名分组和忽略顶级域名
+  if (settings.groupByRootDomain && settings.ignoreTLD) {
     return extractRootDomain(fullDomain);
-  } else {
+  }
+  // 如果只启用了按根域名分组
+  else if (settings.groupByRootDomain) {
+    // 分割域名部分
+    const parts = fullDomain.split('.');
+
+    // 处理常见的二级域名，如 co.uk, com.cn 等
+    const commonSecondLevelDomains = ['co', 'com', 'org', 'net', 'edu', 'gov', 'mil'];
+
+    if (parts.length > 2 &&
+        commonSecondLevelDomains.includes(parts[parts.length - 2]) &&
+        parts[parts.length - 1].length <= 3) {
+      // 对于 example.co.uk 这样的情况，返回 example.co.uk
+      if (parts.length === 3) {
+        return fullDomain;
+      }
+      // 对于 sub.example.co.uk 这样的情况，返回 example.co.uk
+      return parts.slice(-3).join('.');
+    }
+
+    // 对于普通域名，返回最后两部分，如 example.com
+    if (parts.length > 1) {
+      return parts.slice(-2).join('.');
+    }
+
+    return fullDomain;
+  }
+  // 如果都没启用，返回完整域名
+  else {
     return fullDomain;
   }
 }

@@ -2,7 +2,8 @@
 let settings = {
   autoGroupByDomain: true,
   autoGroupOnCreation: true,
-  groupByRootDomain: true,  // 新增：按根域名分组
+  groupByRootDomain: true,  // 按根域名分组
+  ignoreTLD: true,          // 忽略顶级域名（如.com, .org等）
   excludeDomains: [],
   colorScheme: {
     'default': 'blue'
@@ -12,7 +13,8 @@ let settings = {
 // DOM elements
 let autoGroupByDomainCheckbox;
 let autoGroupOnCreationCheckbox;
-let groupByRootDomainCheckbox;  // 新增
+let groupByRootDomainCheckbox;
+let ignoreTLDCheckbox;  // 新增
 let domainListElement;
 let noDomainsElement;
 let newDomainInput;
@@ -28,7 +30,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Get UI elements
   autoGroupByDomainCheckbox = document.getElementById('autoGroupByDomain');
   autoGroupOnCreationCheckbox = document.getElementById('autoGroupOnCreation');
-  groupByRootDomainCheckbox = document.getElementById('groupByRootDomain');  // 新增
+  groupByRootDomainCheckbox = document.getElementById('groupByRootDomain');
+  ignoreTLDCheckbox = document.getElementById('ignoreTLD');  // 新增
   domainListElement = document.getElementById('domainList');
   noDomainsElement = document.getElementById('noDomains');
   newDomainInput = document.getElementById('newDomain');
@@ -73,6 +76,7 @@ function updateUI() {
   autoGroupByDomainCheckbox.checked = settings.autoGroupByDomain;
   autoGroupOnCreationCheckbox.checked = settings.autoGroupOnCreation;
   groupByRootDomainCheckbox.checked = settings.groupByRootDomain;
+  ignoreTLDCheckbox.checked = settings.ignoreTLD;
 
   // Update excluded domains list
   updateDomainList();
@@ -223,6 +227,7 @@ function saveSettings() {
   settings.autoGroupByDomain = autoGroupByDomainCheckbox.checked;
   settings.autoGroupOnCreation = autoGroupOnCreationCheckbox.checked;
   settings.groupByRootDomain = groupByRootDomainCheckbox.checked;
+  settings.ignoreTLD = ignoreTLDCheckbox.checked;
 
   // Get default color
   settings.colorScheme['default'] = defaultColorSelect.value;

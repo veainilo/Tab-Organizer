@@ -2,6 +2,7 @@
 let settings = {
   autoGroupByDomain: true,
   autoGroupOnCreation: true,
+  groupByRootDomain: true,  // 新增：按根域名分组
   excludeDomains: [],
   colorScheme: {
     'default': 'blue'
@@ -36,6 +37,56 @@ function extractDomain(url) {
   }
 }
 
+// Extract root domain from hostname
+function extractRootDomain(hostname) {
+  try {
+    // 处理 IP 地址
+    if (/^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
+      return hostname;
+    }
+
+    // 分割域名部分
+    const parts = hostname.split('.');
+
+    // 如果只有两部分（如 example.com），直接返回
+    if (parts.length <= 2) {
+      return hostname;
+    }
+
+    // 处理常见的二级域名，如 co.uk, com.cn 等
+    const commonSecondLevelDomains = ['co', 'com', 'org', 'net', 'edu', 'gov', 'mil'];
+    const secondLevelDomain = parts[parts.length - 2];
+    const topLevelDomain = parts[parts.length - 1];
+
+    if (parts.length > 2 && commonSecondLevelDomains.includes(secondLevelDomain) && topLevelDomain.length <= 3) {
+      // 对于 example.co.uk 这样的情况，返回 example.co.uk
+      if (parts.length === 3) {
+        return hostname;
+      }
+      // 对于 sub.example.co.uk 这样的情况，返回 example.co.uk
+      return parts.slice(-3).join('.');
+    }
+
+    // 对于普通域名，返回最后两部分，如 example.com
+    return parts.slice(-2).join('.');
+  } catch (e) {
+    console.error('Error extracting root domain:', e);
+    return hostname; // 出错时返回原始域名
+  }
+}
+
+// Get domain for grouping based on settings
+function getDomainForGrouping(url) {
+  const fullDomain = extractDomain(url);
+  if (!fullDomain) return '';
+
+  if (settings.groupByRootDomain) {
+    return extractRootDomain(fullDomain);
+  } else {
+    return fullDomain;
+  }
+}
+
 // Group tabs by domain
 async function groupTabsByDomain() {
   try {
@@ -48,7 +99,7 @@ async function groupTabsByDomain() {
     tabs.forEach(tab => {
       if (!tab.url) return;
 
-      const domain = extractDomain(tab.url);
+      const domain = getDomainForGrouping(tab.url);
       if (!domain || settings.excludeDomains.includes(domain)) return;
 
       if (!domainGroups[domain]) {
@@ -111,7 +162,7 @@ chrome.tabs.onCreated.addListener(async (tab) => {
 
       if (!updatedTab.url) return;
 
-      const domain = extractDomain(updatedTab.url);
+      const domain = getDomainForGrouping(updatedTab.url);
       if (!domain || settings.excludeDomains.includes(domain)) return;
 
       // Find existing group with this domain
@@ -137,7 +188,7 @@ chrome.tabs.onCreated.addListener(async (tab) => {
         const sameDomainTabs = tabs.filter(t =>
           t.id !== tab.id &&
           t.url &&
-          extractDomain(t.url) === domain
+          getDomainForGrouping(t.url) === domain
         );
 
         if (sameDomainTabs.length > 0) {
@@ -167,7 +218,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   // Wait a moment for the tab to fully update
   setTimeout(async () => {
     try {
-      const domain = extractDomain(tab.url);
+      const domain = getDomainForGrouping(tab.url);
       if (!domain || settings.excludeDomains.includes(domain)) {
         // If tab is in a group, remove it
         if (tab.groupId && tab.groupId !== TAB_GROUP_ID_NONE) {
@@ -207,7 +258,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
         const sameDomainTabs = tabs.filter(t =>
           t.id !== tabId &&
           t.url &&
-          extractDomain(t.url) === domain
+          getDomainForGrouping(t.url) === domain
         );
 
         if (sameDomainTabs.length > 0) {

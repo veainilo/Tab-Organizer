@@ -2,6 +2,7 @@
 let settings = {
   autoGroupByDomain: true,
   autoGroupOnCreation: true,
+  groupByRootDomain: true,  // 新增：按根域名分组
   excludeDomains: [],
   colorScheme: {
     'default': 'blue'
@@ -11,6 +12,7 @@ let settings = {
 // DOM elements
 let autoGroupByDomainCheckbox;
 let autoGroupOnCreationCheckbox;
+let groupByRootDomainCheckbox;  // 新增
 let domainListElement;
 let noDomainsElement;
 let newDomainInput;
@@ -26,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Get UI elements
   autoGroupByDomainCheckbox = document.getElementById('autoGroupByDomain');
   autoGroupOnCreationCheckbox = document.getElementById('autoGroupOnCreation');
+  groupByRootDomainCheckbox = document.getElementById('groupByRootDomain');  // 新增
   domainListElement = document.getElementById('domainList');
   noDomainsElement = document.getElementById('noDomains');
   newDomainInput = document.getElementById('newDomain');
@@ -35,15 +38,15 @@ document.addEventListener('DOMContentLoaded', () => {
   defaultColorSelect = document.getElementById('defaultColor');
   saveSettingsButton = document.getElementById('saveSettings');
   statusElement = document.getElementById('status');
-  
+
   // Load settings
   loadSettings();
-  
+
   // Add event listeners
   addDomainButton.addEventListener('click', addExcludedDomain);
   addColorMappingButton.addEventListener('click', addColorMapping);
   saveSettingsButton.addEventListener('click', saveSettings);
-  
+
   // Handle Enter key in domain input
   newDomainInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
@@ -58,7 +61,7 @@ function loadSettings() {
     if (data.tabOrganizerSettings) {
       settings = data.tabOrganizerSettings;
     }
-    
+
     // Update UI with loaded settings
     updateUI();
   });
@@ -69,13 +72,14 @@ function updateUI() {
   // Update checkboxes
   autoGroupByDomainCheckbox.checked = settings.autoGroupByDomain;
   autoGroupOnCreationCheckbox.checked = settings.autoGroupOnCreation;
-  
+  groupByRootDomainCheckbox.checked = settings.groupByRootDomain;
+
   // Update excluded domains list
   updateDomainList();
-  
+
   // Update color mappings
   updateColorMappings();
-  
+
   // Set default color
   defaultColorSelect.value = settings.colorScheme['default'] || 'blue';
 }
@@ -86,29 +90,29 @@ function updateDomainList() {
   while (domainListElement.firstChild) {
     domainListElement.removeChild(domainListElement.firstChild);
   }
-  
+
   if (settings.excludeDomains.length === 0) {
     domainListElement.appendChild(noDomainsElement);
     return;
   }
-  
+
   // Add each domain to the list
   settings.excludeDomains.forEach(domain => {
     const domainItem = document.createElement('div');
     domainItem.className = 'domain-item';
-    
+
     const domainText = document.createElement('span');
     domainText.textContent = domain;
-    
+
     const removeButton = document.createElement('button');
     removeButton.textContent = 'Remove';
     removeButton.addEventListener('click', () => {
       removeDomain(domain);
     });
-    
+
     domainItem.appendChild(domainText);
     domainItem.appendChild(removeButton);
-    
+
     domainListElement.appendChild(domainItem);
   });
 }
@@ -116,37 +120,37 @@ function updateDomainList() {
 // Add a domain to the excluded list
 function addExcludedDomain() {
   const domain = newDomainInput.value.trim();
-  
+
   if (!domain) {
     showStatus('Please enter a domain', 'error');
     return;
   }
-  
+
   // Check if domain is already in the list
   if (settings.excludeDomains.includes(domain)) {
     showStatus('Domain is already in the list', 'error');
     return;
   }
-  
+
   // Add domain to the list
   settings.excludeDomains.push(domain);
-  
+
   // Update UI
   updateDomainList();
-  
+
   // Clear input
   newDomainInput.value = '';
-  
+
   showStatus('Domain added', 'success');
 }
 
 // Remove a domain from the excluded list
 function removeDomain(domain) {
   settings.excludeDomains = settings.excludeDomains.filter(d => d !== domain);
-  
+
   // Update UI
   updateDomainList();
-  
+
   showStatus('Domain removed', 'success');
 }
 
@@ -157,11 +161,11 @@ function updateColorMappings() {
   for (let i = 1; i < children.length; i++) {
     colorMappingsElement.removeChild(children[i]);
   }
-  
+
   // Add each color mapping
   for (const domain in settings.colorScheme) {
     if (domain === 'default') continue;
-    
+
     addColorMappingToUI(domain, settings.colorScheme[domain]);
   }
 }
@@ -175,15 +179,15 @@ function addColorMapping() {
 function addColorMappingToUI(domain, color) {
   const colorItem = document.createElement('div');
   colorItem.className = 'color-item';
-  
+
   const domainInput = document.createElement('input');
   domainInput.type = 'text';
   domainInput.value = domain;
   domainInput.placeholder = 'Enter domain (e.g., example.com)';
-  
+
   const colorSelect = document.createElement('select');
   const colors = ['grey', 'blue', 'red', 'yellow', 'green', 'pink', 'purple', 'cyan', 'orange'];
-  
+
   colors.forEach(c => {
     const option = document.createElement('option');
     option.value = c;
@@ -191,7 +195,7 @@ function addColorMappingToUI(domain, color) {
     option.selected = c === color;
     colorSelect.appendChild(option);
   });
-  
+
   const removeButton = document.createElement('button');
   removeButton.textContent = 'Remove';
   removeButton.style.backgroundColor = '#d83b01';
@@ -201,15 +205,15 @@ function addColorMappingToUI(domain, color) {
   removeButton.style.padding = '3px 8px';
   removeButton.style.marginLeft = '10px';
   removeButton.style.cursor = 'pointer';
-  
+
   removeButton.addEventListener('click', () => {
     colorMappingsElement.removeChild(colorItem);
   });
-  
+
   colorItem.appendChild(domainInput);
   colorItem.appendChild(colorSelect);
   colorItem.appendChild(removeButton);
-  
+
   colorMappingsElement.appendChild(colorItem);
 }
 
@@ -218,29 +222,30 @@ function saveSettings() {
   // Get values from UI
   settings.autoGroupByDomain = autoGroupByDomainCheckbox.checked;
   settings.autoGroupOnCreation = autoGroupOnCreationCheckbox.checked;
-  
+  settings.groupByRootDomain = groupByRootDomainCheckbox.checked;
+
   // Get default color
   settings.colorScheme['default'] = defaultColorSelect.value;
-  
+
   // Get color mappings
   const colorItems = colorMappingsElement.querySelectorAll('.color-item');
   const newColorScheme = {
     'default': settings.colorScheme['default']
   };
-  
+
   for (let i = 1; i < colorItems.length; i++) {
     const domainInput = colorItems[i].querySelector('input');
     const colorSelect = colorItems[i].querySelector('select');
-    
+
     const domain = domainInput.value.trim();
-    
+
     if (domain) {
       newColorScheme[domain] = colorSelect.value;
     }
   }
-  
+
   settings.colorScheme = newColorScheme;
-  
+
   // Save to storage
   chrome.storage.sync.set({ tabOrganizerSettings: settings }, () => {
     if (chrome.runtime.lastError) {
@@ -255,15 +260,15 @@ function saveSettings() {
 function showStatus(message, type) {
   statusElement.textContent = message;
   statusElement.className = 'status';
-  
+
   if (type === 'success') {
     statusElement.classList.add('success');
   } else if (type === 'error') {
     statusElement.classList.add('error');
   }
-  
+
   statusElement.style.display = 'block';
-  
+
   // Hide status after 3 seconds
   setTimeout(() => {
     statusElement.style.display = 'none';

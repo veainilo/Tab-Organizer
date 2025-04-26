@@ -323,21 +323,35 @@ async function sortTabGroups() {
 
     console.log('排序后的标签组:', sortedGroups.map(g => g.title));
 
-    // 收集所有标签页，按排序后的组顺序
-    const allTabs = [];
+    // 计算每个组的新位置
+    let currentIndex = 0;
+    const groupPositions = {};
+
+    // 首先计算每个组的起始位置
     for (const group of sortedGroups) {
+      groupPositions[group.id] = currentIndex;
+      currentIndex += groupInfo[group.id].tabs.length;
+    }
+
+    console.log('计算的组位置:', groupPositions);
+
+    // 从后向前移动每个组（这样可以避免位置计算错误）
+    for (let i = sortedGroups.length - 1; i >= 0; i--) {
+      const group = sortedGroups[i];
       const tabs = groupInfo[group.id].tabs;
-      allTabs.push(...tabs);
-    }
 
-    if (allTabs.length === 0) {
-      console.log('没有标签页，无需排序');
-      return true;
-    }
+      if (tabs.length === 0) {
+        console.log('组内没有标签页，跳过:', group.title);
+        continue;
+      }
 
-    // 一次性移动所有标签页
-    const tabIds = allTabs.map(tab => tab.id);
-    await chrome.tabs.move(tabIds, { index: 0 });
+      // 获取组内所有标签的ID
+      const tabIds = tabs.map(tab => tab.id);
+
+      // 移动整个组到新位置
+      console.log(`移动组 "${group.title}" 到位置 ${groupPositions[group.id]}`);
+      await chrome.tabs.move(tabIds, { index: groupPositions[group.id] });
+    }
 
     console.log('标签组排序完成');
     return true;

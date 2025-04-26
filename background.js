@@ -273,24 +273,34 @@ async function ungroupAllTabs() {
 // 对标签组进行排序
 async function sortTabGroups() {
   console.log('开始对标签组进行排序');
+  console.log('当前设置:', {
+    groupSortingMethod: settings.groupSortingMethod,
+    groupSortAscending: settings.groupSortAscending
+  });
 
   try {
     // 获取当前窗口的所有标签组
     const groups = await chrome.tabGroups.query({ windowId: WINDOW_ID_CURRENT });
     console.log('查询到的标签组:', groups.length, '个');
+    console.log('标签组详情:', groups.map(g => ({ id: g.id, title: g.title, color: g.color })));
 
     if (!groups || groups.length === 0) {
       console.log('没有标签组，无需排序');
       return true;
     }
 
-    // 即使只有一个标签组，也需要对组内标签进行排序
+    if (groups.length === 1) {
+      console.log('只有一个标签组，无需排序标签组，但会排序组内标签');
+      return true;
+    }
+
     console.log('对标签组进行排序，包括组内标签');
 
     // 记录当前标签组的展开/折叠状态
     const groupStates = {};
     for (const group of groups) {
       groupStates[group.id] = group.collapsed;
+      console.log(`标签组 ${group.id} (${group.title || '未命名'}) 的折叠状态:`, group.collapsed);
     }
 
     // 获取每个组的信息，包括组内标签页和排序分数
@@ -436,6 +446,10 @@ async function sortTabGroups() {
 // 对单个标签组内的标签进行排序
 async function sortTabsInGroup(groupId) {
   console.log(`开始对标签组 ${groupId} 内的标签进行排序`);
+  console.log('当前标签排序设置:', {
+    sortingMethod: settings.sortingMethod,
+    sortAscending: settings.sortAscending
+  });
 
   try {
     // 获取组内所有标签
@@ -446,6 +460,13 @@ async function sortTabsInGroup(groupId) {
       console.log('标签数量不足，无需排序');
       return true;
     }
+
+    // 记录当前标签的顺序
+    console.log('当前标签顺序:');
+    tabs.sort((a, b) => a.index - b.index);
+    tabs.forEach((tab, index) => {
+      console.log(`${index + 1}. [${tab.id}] ${tab.title} (${tab.url})`);
+    });
 
     // 获取当前排序方法和排序顺序
     const sortMethod = settings.sortingMethod;
@@ -539,6 +560,16 @@ async function sortTabsInGroup(groupId) {
         console.error(`移动标签页 ${sortedTabs[i].id} 失败:`, error);
       }
     }
+
+    // 验证排序结果
+    console.log('验证排序结果');
+    const sortedTabsAfter = await chrome.tabs.query({ groupId: groupId });
+    sortedTabsAfter.sort((a, b) => a.index - b.index);
+
+    console.log('排序后的标签顺序:');
+    sortedTabsAfter.forEach((tab, index) => {
+      console.log(`${index + 1}. [${tab.id}] ${tab.title} (${tab.url})`);
+    });
 
     console.log(`标签组 ${groupId} 内的标签排序完成`);
     return true;
@@ -1121,12 +1152,19 @@ function startContinuousMonitoring() {
     console.log('下一次执行时间:', new Date(nextExecutionTime).toLocaleString());
 
     autoGroupTimerId = setInterval(async () => {
+      console.log('定时器触发，准备执行自动监控任务');
+      console.log('当前时间:', new Date().toLocaleString());
+      console.log('下一次执行时间:', new Date(nextExecutionTime).toLocaleString());
+
       if (settings.extensionActive && !manualUngrouping) {
         console.log('执行自动监控任务');
         console.log('当前设置状态:', {
+          extensionActive: settings.extensionActive,
+          monitoringEnabled: settings.monitoringEnabled,
           autoGroupByDomain: settings.autoGroupByDomain,
           enableGroupSorting: settings.enableGroupSorting,
-          enableTabSorting: settings.enableTabSorting
+          enableTabSorting: settings.enableTabSorting,
+          autoGroupInterval: settings.autoGroupInterval
         });
 
         try {
@@ -1139,22 +1177,26 @@ function startContinuousMonitoring() {
           }
 
           // 2. 然后对标签组进行排序 - 强制执行，确保排序生效
-          console.log('执行自动标签组排序');
+          console.log('执行自动标签组排序 - 开始');
           const groupSortResult = await sortTabGroups();
           console.log('标签组排序结果:', groupSortResult ? '成功' : '失败');
 
           // 3. 最后对每个标签组内的标签进行排序 - 强制执行，确保排序生效
-          console.log('执行自动标签组内标签排序');
+          console.log('执行自动标签组内标签排序 - 开始');
 
           // 获取所有标签组
           const groups = await chrome.tabGroups.query({ windowId: WINDOW_ID_CURRENT });
           console.log('找到', groups.length, '个标签组需要排序');
 
-          // 对每个标签组内的标签进行排序
-          for (const group of groups) {
-            console.log('排序标签组:', group.id, group.title || '未命名组');
-            const tabSortResult = await sortTabsInGroup(group.id);
-            console.log('标签组内标签排序结果:', tabSortResult ? '成功' : '失败');
+          if (groups.length > 0) {
+            // 对每个标签组内的标签进行排序
+            for (const group of groups) {
+              console.log('排序标签组:', group.id, group.title || '未命名组');
+              const tabSortResult = await sortTabsInGroup(group.id);
+              console.log('标签组内标签排序结果:', tabSortResult ? '成功' : '失败');
+            }
+          } else {
+            console.log('没有找到标签组，跳过组内标签排序');
           }
 
           console.log('自动监控任务完成');
@@ -1202,8 +1244,20 @@ function updateMonitoringStatus() {
 
   // 如果启用了监控且扩展处于激活状态，则启动监控
   if (settings.monitoringEnabled && settings.extensionActive) {
+    console.log('监控已启用且扩展处于激活状态，启动持续监控');
     startContinuousMonitoring();
+  } else {
+    console.log('监控未启用或扩展未激活，不启动持续监控');
+    if (!settings.monitoringEnabled) {
+      console.log('原因: 监控未启用');
+    }
+    if (!settings.extensionActive) {
+      console.log('原因: 扩展未激活');
+    }
   }
+
+  // 保存设置
+  saveSettings();
 }
 
 // 在扩展初始化时启动监控

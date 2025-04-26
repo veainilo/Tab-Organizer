@@ -54,6 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log('getNextExecutionTime 响应:', response);
       if (response && response.success) {
         nextExecutionTime = response.nextExecutionTime;
+        console.log('下一次执行时间:', new Date(nextExecutionTime).toLocaleString());
 
         // 清除现有的倒计时
         if (countdownInterval) {
@@ -68,6 +69,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
           monitoringCountdown.textContent = '';
         }
+      } else {
+        console.error('获取下一次执行时间失败:', response);
+        monitoringCountdown.textContent = '获取时间失败';
       }
     });
   }
@@ -79,8 +83,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (timeLeft <= 0) {
       monitoringCountdown.textContent = '执行中...';
-      // 重新获取下一次执行时间
-      setTimeout(getNextExecutionTimeAndUpdateCountdown, 2000);
+
+      // 等待后台执行完成后再获取新的执行时间
+      // 增加等待时间，确保后台有足够时间完成任务并更新下一次执行时间
+      setTimeout(() => {
+        console.log('倒计时结束，获取新的执行时间');
+        getNextExecutionTimeAndUpdateCountdown();
+      }, 3000);
       return;
     }
 

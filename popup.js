@@ -968,28 +968,36 @@ document.addEventListener('DOMContentLoaded', () => {
           // 尝试从后台获取标签排序指标
           if (sortingMetrics[group.id] && sortingMetrics[group.id].tabs) {
             tabSortingMetrics = sortingMetrics[group.id].tabs;
+            console.log(`从后台获取到标签组 ${group.id} 的标签排序指标:`, tabSortingMetrics);
           } else {
             // 如果没有获取到后台指标，在前端计算
             console.log('未获取到后台标签排序指标，在前端计算');
 
-            // 使用与标签组相同的排序方法计算标签的排序分数
+            // 使用与后台相同的排序方法计算标签的排序分数
             for (const tab of groupTabs) {
               let score;
 
               if (currentSortMethod === 'title') {
                 // 按标题排序
                 score = tab.title || '';
-              } else if (currentSortMethod === 'size') {
-                // 按URL长度排序（作为替代）
-                score = tab.url ? tab.url.length : 0;
-              } else if (currentSortMethod === 'smart') {
+              } else if (currentSortMethod === 'domain') {
+                // 按域名排序
+                const url = tab.url || '';
+                const domain = url.replace(/^(https?:\/\/)?(www\.)?/, '').split('/')[0];
+                score = domain;
+              } else if (currentSortMethod === 'size' || currentSortMethod === 'smart') {
                 // 智能排序（结合多个因素）
-                const accessScore = Math.random(); // 模拟访问时间分数
+                // 使用更稳定的计算方法，避免随机性
                 const urlScore = tab.url ? Math.min(tab.url.length / 100, 1) : 0; // URL长度分数
                 const titleScore = tab.title ? Math.min(tab.title.length / 50, 1) : 0; // 标题长度分数
 
+                // 提取域名
+                const url = tab.url || '';
+                const domain = url.replace(/^(https?:\/\/)?(www\.)?/, '').split('/')[0];
+                const domainScore = domain.length / 20; // 域名长度分数
+
                 // 加权平均
-                score = (accessScore * 0.5) + (urlScore * 0.3) + (titleScore * 0.2);
+                score = (urlScore * 0.4) + (titleScore * 0.4) + (domainScore * 0.2);
               } else {
                 // 默认按索引排序
                 score = tab.index;
@@ -1001,6 +1009,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 url: tab.url || '',
                 index: tab.index
               };
+
+              console.log(`标签 ${tab.id} (${tab.title}) 的排序分数: ${score}`);
             }
           }
         } catch (error) {
@@ -1033,6 +1043,12 @@ document.addEventListener('DOMContentLoaded', () => {
               scoreA - scoreB :
               scoreB - scoreA;
           }
+        });
+
+        // 记录排序后的顺序
+        console.log('popup中排序后的标签顺序:');
+        sortedTabs.forEach((tab, index) => {
+          console.log(`${index + 1}. ${tab.title} (ID: ${tab.id})`);
         });
 
         // 添加标签列表标题

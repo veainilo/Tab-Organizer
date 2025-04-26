@@ -466,67 +466,77 @@ async function sortTabsInGroup(groupId) {
       return true;
     }
 
+    // 获取当前排序方法和排序顺序
+    const sortMethod = settings.sortingMethod;
+    const sortAscending = settings.sortAscending;
+
+    console.log(`使用排序方法: ${sortMethod}, 排序顺序: ${sortAscending ? '升序' : '降序'}`);
+
     // 计算每个标签的排序分数
     const tabScores = {};
     for (const tab of tabs) {
       let score;
 
-      if (settings.sortingMethod === 'title') {
+      if (sortMethod === 'title') {
         // 按标题排序
         score = tab.title || '';
-      } else if (settings.sortingMethod === 'domain') {
+      } else if (sortMethod === 'domain') {
         // 按域名排序
         score = extractDomain(tab.url || '');
-      } else if (settings.sortingMethod === 'smart') {
+      } else if (sortMethod === 'smart') {
         // 智能排序（结合多个因素）
-        const accessScore = Math.random(); // 模拟访问时间分数
+        // 使用更稳定的计算方法，避免随机性
         const urlScore = tab.url ? Math.min(tab.url.length / 100, 1) : 0; // URL长度分数
         const titleScore = tab.title ? Math.min(tab.title.length / 50, 1) : 0; // 标题长度分数
+        const domainScore = tab.url ? extractDomain(tab.url).length / 20 : 0; // 域名长度分数
 
         // 加权平均
-        score = (accessScore * 0.5) + (urlScore * 0.3) + (titleScore * 0.2);
+        score = (urlScore * 0.4) + (titleScore * 0.4) + (domainScore * 0.2);
       } else {
         // 默认按索引排序
         score = tab.index;
       }
 
       tabScores[tab.id] = score;
+      console.log(`标签 ${tab.id} (${tab.title}) 的排序分数: ${score}`);
     }
 
     // 根据分数对标签页进行排序
-    tabs.sort((a, b) => {
+    const sortedTabs = [...tabs].sort((a, b) => {
       const scoreA = tabScores[a.id];
       const scoreB = tabScores[b.id];
 
       if (typeof scoreA === 'string' && typeof scoreB === 'string') {
         // 字符串比较
-        return settings.sortAscending ?
+        return sortAscending ?
           scoreA.localeCompare(scoreB) :
           scoreB.localeCompare(scoreA);
       } else {
         // 数值比较
-        return settings.sortAscending ?
+        return sortAscending ?
           scoreA - scoreB :
           scoreB - scoreA;
       }
     });
 
-    // 移动标签到新位置
-    for (let i = 0; i < tabs.length; i++) {
-      try {
-        await chrome.tabs.move(tabs[i].id, { index: -1 }); // 移动到最后
-      } catch (error) {
-        console.error(`移动标签页 ${tabs[i].id} 失败:`, error);
-      }
-    }
+    console.log('排序后的标签顺序:');
+    sortedTabs.forEach((tab, index) => {
+      console.log(`${index + 1}. ${tab.title} (ID: ${tab.id})`);
+    });
 
-    // 按照排序后的顺序重新移动标签
-    let baseIndex = tabs[0].index; // 获取第一个标签的索引作为基准
-    for (let i = 0; i < tabs.length; i++) {
+    // 一次性移动所有标签到新位置
+    // 首先获取当前窗口中所有标签的数量
+    const allTabs = await chrome.tabs.query({ windowId: chrome.windows.WINDOW_ID_CURRENT });
+    const totalTabs = allTabs.length;
+
+    // 将所有标签移动到窗口末尾，保持它们的相对顺序
+    for (let i = 0; i < sortedTabs.length; i++) {
       try {
-        await chrome.tabs.move(tabs[i].id, { index: baseIndex + i });
+        // 计算目标位置：窗口末尾
+        const targetIndex = totalTabs - sortedTabs.length + i;
+        await chrome.tabs.move(sortedTabs[i].id, { index: targetIndex });
       } catch (error) {
-        console.error(`移动标签页 ${tabs[i].id} 失败:`, error);
+        console.error(`移动标签页 ${sortedTabs[i].id} 失败:`, error);
       }
     }
 
@@ -598,12 +608,13 @@ async function getSortingMetrics() {
           score = extractDomain(tab.url || '');
         } else if (settings.sortingMethod === 'smart') {
           // 智能排序（结合多个因素）
-          const tabAccessScore = Math.random(); // 模拟访问时间分数
+          // 使用更稳定的计算方法，避免随机性
           const urlScore = tab.url ? Math.min(tab.url.length / 100, 1) : 0; // URL长度分数
           const titleScore = tab.title ? Math.min(tab.title.length / 50, 1) : 0; // 标题长度分数
+          const domainScore = tab.url ? extractDomain(tab.url).length / 20 : 0; // 域名长度分数
 
           // 加权平均
-          score = (tabAccessScore * 0.5) + (urlScore * 0.3) + (titleScore * 0.2);
+          score = (urlScore * 0.4) + (titleScore * 0.4) + (domainScore * 0.2);
         } else {
           // 默认按索引排序
           score = tab.index;
@@ -615,6 +626,8 @@ async function getSortingMetrics() {
           index: tab.index,
           score: score
         };
+
+        console.log(`标签 ${tab.id} (${tab.title}) 的排序分数: ${score}`);
       }
 
       metrics[group.id] = {

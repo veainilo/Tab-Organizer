@@ -610,6 +610,31 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       console.log('标签组计数:', groupTabCounts);
 
+      // 获取排序指标数据
+      let sortingMetrics = {};
+      try {
+        const metricsResponse = await chrome.runtime.sendMessage({ action: 'getSortingMetrics' });
+        if (metricsResponse && metricsResponse.success) {
+          sortingMetrics = metricsResponse.metrics || {};
+        }
+      } catch (error) {
+        console.error('获取排序指标失败:', error);
+      }
+
+      // 获取当前排序方法和排序顺序
+      let currentSortMethod = 'position'; // 默认按位置排序
+      let sortAscending = true; // 默认升序
+
+      try {
+        const statusResponse = await chrome.runtime.sendMessage({ action: 'getExtensionStatus' });
+        if (statusResponse && statusResponse.success && statusResponse.settings) {
+          currentSortMethod = statusResponse.settings.groupSortingMethod || 'position';
+          sortAscending = statusResponse.settings.groupSortAscending !== false;
+        }
+      } catch (error) {
+        console.error('获取扩展状态失败:', error);
+      }
+
       // 获取标签组的顺序
       // 首先，找出每个组的第一个标签页的索引
       const groupFirstTabIndex = {};
@@ -625,22 +650,120 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
-      // 根据第一个标签页的索引对组进行排序
-      const sortedGroups = [...groups].sort((a, b) =>
-        groupFirstTabIndex[a.id] - groupFirstTabIndex[b.id]);
+      // 计算每个组的排序分数
+      const groupScores = {};
+      for (const group of groups) {
+        // 默认使用位置作为分数
+        let score = groupFirstTabIndex[group.id];
 
-      // 添加标题行，显示排序顺序
+        // 如果有排序指标数据，使用指标数据
+        if (sortingMetrics[group.id]) {
+          const metrics = sortingMetrics[group.id];
+
+          if (currentSortMethod === 'title') {
+            score = metrics.title || '';
+          } else if (currentSortMethod === 'size') {
+            score = metrics.size || 0;
+          } else if (currentSortMethod === 'smart') {
+            score = metrics.finalScore || 0;
+          }
+        }
+
+        groupScores[group.id] = score;
+      }
+
+      // 根据分数对组进行排序
+      const sortedGroups = [...groups].sort((a, b) => {
+        const scoreA = groupScores[a.id];
+        const scoreB = groupScores[b.id];
+
+        if (typeof scoreA === 'string' && typeof scoreB === 'string') {
+          // 字符串比较
+          return sortAscending ?
+            scoreA.localeCompare(scoreB) :
+            scoreB.localeCompare(scoreA);
+        } else {
+          // 数值比较
+          return sortAscending ?
+            scoreA - scoreB :
+            scoreB - scoreA;
+        }
+      });
+
+      // 添加标题行，显示排序顺序和排序控制
       const headerRow = document.createElement('div');
       headerRow.className = 'group-header';
-      headerRow.innerHTML = `
-        <div class="group-header-title">标签组名称</div>
-        <div class="group-header-info">
-          <span>标签数</span>
-          <span>排序</span>
-          <span>操作</span>
-        </div>
+
+      // 创建排序方法选择器
+      const sortMethodSelector = document.createElement('select');
+      sortMethodSelector.className = 'sort-method-selector';
+      sortMethodSelector.innerHTML = `
+        <option value="position" ${currentSortMethod === 'position' ? 'selected' : ''}>按位置</option>
+        <option value="title" ${currentSortMethod === 'title' ? 'selected' : ''}>按标题</option>
+        <option value="size" ${currentSortMethod === 'size' ? 'selected' : ''}>按大小</option>
+        <option value="smart" ${currentSortMethod === 'smart' ? 'selected' : ''}>智能排序</option>
       `;
+
+      // 创建排序顺序切换按钮
+      const sortOrderToggle = document.createElement('button');
+      sortOrderToggle.className = 'sort-order-toggle';
+      sortOrderToggle.innerHTML = sortAscending ? '↑ 升序' : '↓ 降序';
+      sortOrderToggle.title = sortAscending ? '点击切换为降序' : '点击切换为升序';
+
+      // 添加排序方法选择器的事件监听器
+      sortMethodSelector.addEventListener('change', () => {
+        const newMethod = sortMethodSelector.value;
+        chrome.runtime.sendMessage({
+          action: 'updateSortingMethod',
+          method: newMethod
+        }, (response) => {
+          if (response && response.success) {
+            loadTabGroups(); // 重新加载标签组列表
+          }
+        });
+      });
+
+      // 添加排序顺序切换按钮的事件监听器
+      sortOrderToggle.addEventListener('click', () => {
+        chrome.runtime.sendMessage({
+          action: 'toggleSortOrder'
+        }, (response) => {
+          if (response && response.success) {
+            loadTabGroups(); // 重新加载标签组列表
+          }
+        });
+      });
+
+      // 创建排序控制容器
+      const sortControls = document.createElement('div');
+      sortControls.className = 'sort-controls';
+      sortControls.appendChild(sortMethodSelector);
+      sortControls.appendChild(sortOrderToggle);
+
+      // 创建标题行内容
+      const headerTitle = document.createElement('div');
+      headerTitle.className = 'group-header-title';
+      headerTitle.textContent = '标签组名称';
+
+      const headerInfo = document.createElement('div');
+      headerInfo.className = 'group-header-info';
+      headerInfo.innerHTML = `
+        <span>标签数</span>
+        <span>评分</span>
+        <span>操作</span>
+      `;
+
+      headerRow.appendChild(headerTitle);
+      headerRow.appendChild(headerInfo);
+
+      // 添加排序控制行
+      const sortControlRow = document.createElement('div');
+      sortControlRow.className = 'sort-control-row';
+      sortControlRow.appendChild(sortControls);
+
+      // 添加标题行和排序控制行
       groupListElement.appendChild(headerRow);
+      groupListElement.appendChild(sortControlRow);
 
       // Add each group to the list in the sorted order
       sortedGroups.forEach((group, index) => {
@@ -687,12 +810,32 @@ document.addEventListener('DOMContentLoaded', () => {
         groupCount.textContent = groupTabCounts[group.id] || 0;
         rightContainer.appendChild(groupCount);
 
-        // 添加排序指标
-        const sortIndicator = document.createElement('span');
-        sortIndicator.className = 'sort-indicator';
-        sortIndicator.title = '当前排序位置';
-        sortIndicator.textContent = `#${index + 1}`;
-        rightContainer.appendChild(sortIndicator);
+        // 添加排序评分
+        const scoreIndicator = document.createElement('span');
+        scoreIndicator.className = 'score-indicator';
+
+        // 获取排序评分
+        let scoreText = `#${index + 1}`;
+        let scoreTitle = '当前排序位置';
+
+        if (sortingMetrics[group.id]) {
+          const metrics = sortingMetrics[group.id];
+
+          if (currentSortMethod === 'title') {
+            scoreText = metrics.title || '';
+            scoreTitle = '标题';
+          } else if (currentSortMethod === 'size') {
+            scoreText = metrics.size || '0';
+            scoreTitle = '标签数量';
+          } else if (currentSortMethod === 'smart') {
+            scoreText = metrics.finalScore ? metrics.finalScore.toFixed(2) : '0';
+            scoreTitle = '智能排序评分';
+          }
+        }
+
+        scoreIndicator.textContent = scoreText;
+        scoreIndicator.title = `${scoreTitle}: ${scoreText}`;
+        rightContainer.appendChild(scoreIndicator);
 
         // 添加操作按钮
         const actionsContainer = document.createElement('div');

@@ -808,6 +808,54 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
 
+  // 更新排序方法
+  if (message.action === 'updateSortingMethod') {
+    console.log('处理 updateSortingMethod 消息');
+
+    if (message.method !== undefined) {
+      settings.groupSortingMethod = message.method;
+
+      // 如果更新了排序方法，自动执行一次排序
+      if (settings.extensionActive && settings.enableGroupSorting) {
+        sortTabGroups().then(() => {
+          console.log('排序方法已更新，已重新排序标签组');
+        }).catch(error => {
+          console.error('排序标签组失败:', error);
+        });
+      }
+    }
+
+    sendResponse({
+      success: true,
+      settings: settings
+    });
+    return true;
+  }
+
+  // 切换排序顺序
+  if (message.action === 'toggleSortOrder') {
+    console.log('处理 toggleSortOrder 消息');
+
+    // 切换排序顺序
+    settings.groupSortAscending = !settings.groupSortAscending;
+
+    // 如果切换了排序顺序，自动执行一次排序
+    if (settings.extensionActive && settings.enableGroupSorting) {
+      sortTabGroups().then(() => {
+        console.log('排序顺序已切换，已重新排序标签组');
+      }).catch(error => {
+        console.error('排序标签组失败:', error);
+      });
+    }
+
+    sendResponse({
+      success: true,
+      settings: settings,
+      sortAscending: settings.groupSortAscending
+    });
+    return true;
+  }
+
   // 未知消息
   console.warn('收到未知消息:', message);
   sendResponse({ success: false, error: 'Unknown action' });

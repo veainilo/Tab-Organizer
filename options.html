@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Edge Tab Organizer - Settings</title>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      color: #333;
+    }
+    
+    h1 {
+      color: #0078d7;
+      border-bottom: 1px solid #e1e1e1;
+      padding-bottom: 10px;
+    }
+    
+    .section {
+      margin-bottom: 30px;
+    }
+    
+    .section-title {
+      font-size: 18px;
+      margin-bottom: 10px;
+      color: #0078d7;
+    }
+    
+    .option {
+      margin-bottom: 15px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+    }
+    
+    input[type="checkbox"] {
+      margin-right: 8px;
+    }
+    
+    input[type="text"], select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+      font-family: inherit;
+      font-size: 14px;
+    }
+    
+    .domain-list {
+      margin-top: 10px;
+      border: 1px solid #e1e1e1;
+      border-radius: 4px;
+      padding: 10px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    
+    .domain-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px;
+      margin-bottom: 5px;
+      background-color: #f5f5f5;
+      border-radius: 3px;
+    }
+    
+    .domain-item button {
+      background-color: #d83b01;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      padding: 3px 8px;
+      cursor: pointer;
+    }
+    
+    .domain-input {
+      display: flex;
+      margin-top: 10px;
+    }
+    
+    .domain-input input {
+      flex-grow: 1;
+      margin-right: 10px;
+    }
+    
+    .domain-input button {
+      background-color: #0078d7;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 15px;
+      cursor: pointer;
+    }
+    
+    .color-mapping {
+      margin-top: 10px;
+    }
+    
+    .color-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    
+    .color-item input {
+      flex-grow: 1;
+      margin-right: 10px;
+    }
+    
+    .color-item select {
+      width: 150px;
+    }
+    
+    .add-color-mapping {
+      background-color: #0078d7;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 15px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    
+    .save-button {
+      background-color: #0078d7;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+    
+    .save-button:hover {
+      background-color: #005a9e;
+    }
+    
+    .status {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 4px;
+      display: none;
+    }
+    
+    .success {
+      background-color: #dff6dd;
+      color: #107c10;
+    }
+    
+    .error {
+      background-color: #fde7e9;
+      color: #a80000;
+    }
+  </style>
+</head>
+<body>
+  <h1>Edge Tab Organizer - Settings</h1>
+  
+  <div class="section">
+    <div class="section-title">Automatic Grouping</div>
+    
+    <div class="option">
+      <label>
+        <input type="checkbox" id="autoGroupByDomain">
+        Automatically group tabs by domain
+      </label>
+    </div>
+    
+    <div class="option">
+      <label>
+        <input type="checkbox" id="autoGroupOnCreation">
+        Automatically group new tabs when created
+      </label>
+    </div>
+  </div>
+  
+  <div class="section">
+    <div class="section-title">Excluded Domains</div>
+    <p>Tabs from these domains will not be automatically grouped:</p>
+    
+    <div id="domainList" class="domain-list">
+      <div id="noDomains">No excluded domains</div>
+    </div>
+    
+    <div class="domain-input">
+      <input type="text" id="newDomain" placeholder="Enter domain (e.g., example.com)">
+      <button id="addDomain">Add Domain</button>
+    </div>
+  </div>
+  
+  <div class="section">
+    <div class="section-title">Color Scheme</div>
+    <p>Customize colors for specific domains:</p>
+    
+    <div id="colorMappings" class="color-mapping">
+      <div class="color-item">
+        <input type="text" value="default" disabled>
+        <select id="defaultColor">
+          <option value="grey">Grey</option>
+          <option value="blue" selected>Blue</option>
+          <option value="red">Red</option>
+          <option value="yellow">Yellow</option>
+          <option value="green">Green</option>
+          <option value="pink">Pink</option>
+          <option value="purple">Purple</option>
+          <option value="cyan">Cyan</option>
+          <option value="orange">Orange</option>
+        </select>
+      </div>
+    </div>
+    
+    <button id="addColorMapping" class="add-color-mapping">Add Domain Color</button>
+  </div>
+  
+  <button id="saveSettings" class="save-button">Save Settings</button>
+  
+  <div id="status" class="status"></div>
+  
+  <script src="options.js"></script>
+</body>
+</html>

@@ -8,6 +8,7 @@ const chromeMock = {
     get: jest.fn(),
     group: jest.fn(),
     ungroup: jest.fn(),
+    move: jest.fn(),
     onCreated: {
       addListener: jest.fn(),
       removeListener: jest.fn()
@@ -20,7 +21,8 @@ const chromeMock = {
   tabGroups: {
     query: jest.fn(),
     get: jest.fn(),
-    update: jest.fn()
+    update: jest.fn(),
+    move: jest.fn()
   },
   storage: {
     sync: {

@@ -54,3 +54,56 @@ MIT License
 ## 联系方式
 
 如有任何问题或建议，请通过GitHub Issues联系我们。
+
+## 单元测试
+
+该项目包含一套完整的单元测试框架和测试用例，确保代码质量和可靠性。
+
+### 测试框架
+
+- 使用 Jest 测试框架
+- 测试文件位于 `tests/` 目录下
+- 包含单元测试和集成测试
+
+### 运行测试
+
+运行所有测试:
+```bash
+npm test
+```
+
+运行特定测试文件:
+```bash
+npm test -- tests/unit/utils.test.js
+```
+
+生成测试覆盖率报告:
+```bash
+npm run test:coverage
+```
+
+### 测试覆盖率
+
+测试覆盖率报告可通过运行 `npm run test:coverage` 命令生成。目前 utils.js 模块的测试覆盖率达到 90% 以上。
+
+### 测试组织结构
+
+```
+tests/
+  ├── unit/             # 单元测试
+  │   ├── utils.test.js
+  │   ├── settings.test.js
+  │   ├── tab-grouping.test.js
+  │   ├── tab-sorting.test.js
+  │   ├── group-sorting.test.js
+  │   └── monitoring.test.js
+  ├── integration/      # 集成测试
+  │   ├── background.test.js
+  │   └── popup.test.js
+  ├── mocks/            # 测试模拟
+  │   ├── chrome-api-mock.js
+  │   ├── test-data.js
+  │   ├── callback-fix.js
+  │   └── mock-modules.js
+  └── setup.js          # 测试设置
+```

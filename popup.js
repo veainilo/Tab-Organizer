@@ -1,6 +1,6 @@
 // Define constants
 const TAB_GROUP_ID_NONE = -1;
-const WINDOW_ID_CURRENT = -2;
+const WINDOW_ID_CURRENT = chrome.windows.WINDOW_ID_CURRENT;
 
 // Helper function to get localized message
 function getMessage(messageName, substitutions) {

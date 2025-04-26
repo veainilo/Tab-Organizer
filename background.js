@@ -3,6 +3,9 @@ function getMessage(messageName, substitutions) {
   return chrome.i18n.getMessage(messageName, substitutions);
 }
 
+// 常量定义
+const WINDOW_ID_CURRENT = chrome.windows.WINDOW_ID_CURRENT;
+
 // Default settings
 let settings = {
   autoGroupByDomain: true,
@@ -713,7 +716,7 @@ async function createOrUpdateTabGroup(tabIds, domain, existingGroupId = null) {
 }
 
 // 对窗口中的所有标签组进行排序
-async function sortTabGroups(windowId = WINDOW_ID_CURRENT) {
+async function sortTabGroups(windowId = chrome.windows.WINDOW_ID_CURRENT) {
   try {
     // 如果没有启用标签组排序，直接返回
     if (!settings.enableGroupSorting) return;

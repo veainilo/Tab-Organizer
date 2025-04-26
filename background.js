@@ -767,7 +767,7 @@ async function sortTabGroups(windowId = chrome.windows.WINDOW_ID_CURRENT) {
 
       case 'size':
         // 按标签页数量排序
-        const groupSizes = {};
+        let groupSizes = {};
         for (const group of groups) {
           const tabs = await chrome.tabs.query({ groupId: group.id });
           groupSizes[group.id] = tabs.length;
@@ -803,6 +803,25 @@ async function sortTabGroups(windowId = chrome.windows.WINDOW_ID_CURRENT) {
             timeB - timeA;
         });
         break;
+
+      case 'smart':
+        // 智能排序 (结合多种因素)
+        // 获取每个组的标签页数量
+        groupSizes = {};
+        for (const group of groups) {
+          const tabs = await chrome.tabs.query({ groupId: group.id });
+          groupSizes[group.id] = tabs.length;
+        }
+
+        sortedGroups.sort((a, b) => {
+          // 计算综合分数 (访问时间、创建时间、标签页数量的加权平均)
+          const scoreA = calculateGroupSmartScore(a.id, groupSizes[a.id] || 0);
+          const scoreB = calculateGroupSmartScore(b.id, groupSizes[b.id] || 0);
+          return settings.groupSortAscending ?
+            scoreA - scoreB :
+            scoreB - scoreA;
+        });
+        break;
     }
 
     // 移动标签组
@@ -833,6 +852,25 @@ async function sortTabGroups(windowId = chrome.windows.WINDOW_ID_CURRENT) {
   } catch (error) {
     console.error('Error sorting tab groups:', error);
   }
+}
+
+// 计算标签组的智能排序分数
+function calculateGroupSmartScore(groupId, groupSize) {
+  const now = Date.now();
+  const accessTime = groupLastAccessTimes[groupId] || 0;
+  const createTime = groupCreateTimes[groupId] || 0;
+
+  // 访问时间权重 (最近访问的分数高)
+  const accessScore = accessTime ? (now - accessTime) / 3600000 : 24; // 小时为单位，最大24
+
+  // 标签页数量权重 (数量多的分数高)
+  const sizeScore = Math.min(groupSize * 5, 100); // 最大100
+
+  // 创建时间权重 (新创建的分数高)
+  const createScore = createTime ? (now - createTime) / 86400000 : 30; // 天为单位，最大30
+
+  // 综合分数 (访问时间占40%，标签页数量占40%，创建时间占20%)
+  return (accessScore * 0.4) + (sizeScore * 0.4) + (createScore * 0.2);
 }
 
 // 监听标签组更新事件

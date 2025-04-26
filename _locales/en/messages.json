@@ -26,7 +26,7 @@
   "sortByAccessTime": {"message": "Sort by recent access", "description": "Option to sort tabs by access time"},
   "sortByCreateTime": {"message": "Sort by creation time", "description": "Option to sort tabs by creation time"},
   "sortByFrequency": {"message": "Sort by usage frequency", "description": "Option to sort tabs by usage frequency"},
-  "sortBySmart": {"message": "Smart sorting", "description": "Option to use smart sorting"},
+  "sortBySmart": {"message": "Smart sorting (combines multiple factors)", "description": "Option to use smart sorting"},
   "sortByColor": {"message": "Sort by color", "description": "Option to sort groups by color"},
   "sortBySize": {"message": "Sort by number of tabs", "description": "Option to sort groups by number of tabs"},
   "sortByLastAccessed": {"message": "Sort by last accessed", "description": "Option to sort groups by last accessed time"},

@@ -26,7 +26,7 @@
   "sortByAccessTime": {"message": "按最近访问时间排序", "description": "按访问时间排序选项"},
   "sortByCreateTime": {"message": "按创建时间排序", "description": "按创建时间排序选项"},
   "sortByFrequency": {"message": "按使用频率排序", "description": "按使用频率排序选项"},
-  "sortBySmart": {"message": "智能排序", "description": "智能排序选项"},
+  "sortBySmart": {"message": "智能排序（综合多种因素）", "description": "智能排序选项"},
   "sortByColor": {"message": "按颜色排序", "description": "按颜色排序选项"},
   "sortBySize": {"message": "按标签页数量排序", "description": "按标签页数量排序选项"},
   "sortByLastAccessed": {"message": "按最后访问时间排序", "description": "按最后访问时间排序选项"},

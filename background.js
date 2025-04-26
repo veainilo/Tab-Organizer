@@ -11,6 +11,7 @@ const WINDOW_ID_CURRENT = chrome.windows.WINDOW_ID_CURRENT;
 
 // Default settings
 let settings = {
+  extensionActive: true,      // 插件激活开关
   autoGroupByDomain: true,
   autoGroupOnCreation: true,
   groupByRootDomain: true,  // 按根域名分组
@@ -66,6 +67,9 @@ baseColors.forEach(color => colorUsageCount[color] = 0);
 
 // 当前已分配的域名列表
 const assignedDomains = [];
+
+// 标志，指示是否是用户手动取消分组
+let manualUngrouping = false;
 
 // Define constant for ungrouped tabs
 const TAB_GROUP_ID_NONE = -1;
@@ -516,8 +520,15 @@ chrome.tabs.onCreated.addListener(async (tab) => {
   console.log('Tab created:', tab);
   console.log('autoGroupOnCreation setting:', settings.autoGroupOnCreation);
 
-  if (!settings.autoGroupOnCreation) {
-    console.log('Auto group on creation is disabled');
+  // 如果扩展未激活或自动分组未启用，不执行任何操作
+  if (!settings.extensionActive || !settings.autoGroupOnCreation) {
+    console.log('扩展未激活或自动分组未启用，退出. 扩展激活状态:', settings.extensionActive);
+    return;
+  }
+
+  // 如果是用户手动取消分组，不执行自动分组
+  if (manualUngrouping) {
+    console.log('用户手动取消分组，不执行自动分组');
     return;
   }
 
@@ -577,8 +588,12 @@ chrome.tabs.onCreated.addListener(async (tab) => {
 
 // Handle tab updates (URL changes)
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (!settings.autoGroupByDomain) return;
+  // 如果扩展未激活或自动分组未启用，不执行任何操作
+  if (!settings.extensionActive || !settings.autoGroupByDomain) return;
   if (!changeInfo.url) return;
+
+  // 如果是用户手动取消分组，不执行自动分组
+  if (manualUngrouping) return;
 
   // Wait a moment for the tab to fully update
   setTimeout(async () => {
@@ -1062,6 +1077,9 @@ function calculateGroupSmartScore(groupId, groupSize) {
 
 // 监听标签组更新事件
 chrome.tabGroups.onUpdated.addListener(async (group) => {
+  // 如果扩展未激活，不执行任何操作
+  if (!settings.extensionActive) return;
+
   // 更新标签组最后访问时间
   groupLastAccessTimes[group.id] = Date.now();
 
@@ -1078,6 +1096,9 @@ chrome.tabGroups.onUpdated.addListener(async (group) => {
 
 // 监听标签组创建事件
 chrome.tabGroups.onCreated.addListener(async (group) => {
+  // 如果扩展未激活，不执行任何操作
+  if (!settings.extensionActive) return;
+
   // 记录标签组创建时间
   groupCreateTimes[group.id] = Date.now();
   groupLastAccessTimes[group.id] = Date.now();
@@ -1093,6 +1114,9 @@ chrome.tabGroups.onCreated.addListener(async (group) => {
 
 // 监听标签页组状态变化事件
 chrome.tabs.onGroupChanged.addListener(async (tabId, details) => {
+  // 如果扩展未激活，不执行任何操作
+  if (!settings.extensionActive) return;
+
   // 更新标签组最后访问时间
   if (details.groupId !== TAB_GROUP_ID_NONE) {
     groupLastAccessTimes[details.groupId] = Date.now();
@@ -1110,6 +1134,9 @@ chrome.tabs.onGroupChanged.addListener(async (tabId, details) => {
 
 // 监听标签页移动事件
 chrome.tabs.onMoved.addListener(async (tabId, _moveInfo) => {
+  // 如果扩展未激活，不执行任何操作
+  if (!settings.extensionActive) return;
+
   // 获取标签页信息
   const tab = await chrome.tabs.get(tabId);
 
@@ -1183,6 +1210,17 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   if (message.action === 'ungroupAll') {
     console.log('处理 ungroupAll 消息');
+
+    // 如果插件处于激活状态，不允许取消分组
+    if (settings.extensionActive) {
+      console.log('插件处于激活状态，不允许取消分组');
+      sendResponse({ success: false, error: 'Extension is active, ungrouping is not allowed' });
+      return true;
+    }
+
+    // 设置手动取消分组标志，防止自动重新分组
+    manualUngrouping = true;
+
     chrome.tabs.query({ currentWindow: true }, async (tabs) => {
       console.log('查询到的标签页:', tabs);
       try {
@@ -1193,9 +1231,18 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           }
         }
         console.log('ungroupAll 成功完成');
+
+        // 操作完成后重置标志
+        setTimeout(() => {
+          manualUngrouping = false;
+          console.log('重置手动取消分组标志');
+        }, 1000);
+
         sendResponse({ success: true });
       } catch (error) {
         console.error('Error in ungroupAll:', error);
+        // 出错时也重置标志
+        manualUngrouping = false;
         sendResponse({ success: false, error: error.message });
       }
     });
@@ -1331,5 +1378,38 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       sendResponse({ success: false, error: error.message });
       return true;
     }
+  }
+
+  // 获取插件状态
+  if (message.action === 'getExtensionStatus') {
+    console.log('处理 getExtensionStatus 消息');
+    sendResponse({
+      success: true,
+      active: settings.extensionActive,
+      settings: settings
+    });
+    return true;
+  }
+
+  // 切换插件激活状态
+  if (message.action === 'toggleExtensionActive') {
+    console.log('处理 toggleExtensionActive 消息');
+    const newState = message.active !== undefined ? message.active : !settings.extensionActive;
+    settings.extensionActive = newState;
+
+    // 如果激活了插件，自动对所有标签页进行分组
+    if (settings.extensionActive) {
+      groupTabsByDomain().then(() => {
+        console.log('插件激活，已对所有标签页进行分组');
+      }).catch(error => {
+        console.error('Error grouping tabs after activation:', error);
+      });
+    }
+
+    sendResponse({
+      success: true,
+      active: settings.extensionActive
+    });
+    return true;
   }
 });

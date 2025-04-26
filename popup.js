@@ -39,6 +39,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const sortingMetricsElement = document.getElementById('sortingMetrics');
   const extensionActiveToggle = document.getElementById('extensionActiveToggle');
   const extensionActiveStatus = document.getElementById('extensionActiveStatus');
+  const monitoringToggle = document.getElementById('monitoringToggle');
+  const monitoringStatus = document.getElementById('monitoringStatus');
 
   // 获取插件状态
   chrome.runtime.sendMessage({ action: 'getExtensionStatus' }, (response) => {
@@ -50,6 +52,12 @@ document.addEventListener('DOMContentLoaded', () => {
       updateExtensionActiveStatus(response.active);
       // 根据插件状态启用或禁用取消分组按钮
       updateUngroupButtonState(response.active);
+
+      // 设置监控开关状态
+      if (response.settings && response.settings.monitoringEnabled !== undefined) {
+        monitoringToggle.checked = response.settings.monitoringEnabled;
+        updateMonitoringStatus(response.settings.monitoringEnabled);
+      }
     }
   });
 
@@ -99,10 +107,33 @@ document.addEventListener('DOMContentLoaded', () => {
     return true;
   });
 
+  // 添加监控开关事件监听器
+  monitoringToggle.addEventListener('change', () => {
+    const isEnabled = monitoringToggle.checked;
+    console.log('持续监控状态切换:', isEnabled);
+
+    chrome.runtime.sendMessage({
+      action: 'toggleMonitoring',
+      enabled: isEnabled
+    }, (response) => {
+      console.log('toggleMonitoring 响应:', response);
+      if (response && response.success) {
+        // 更新状态文本
+        updateMonitoringStatus(response.monitoringEnabled);
+      }
+    });
+  });
+
   // 更新插件激活状态文本
   function updateExtensionActiveStatus(isActive) {
     extensionActiveStatus.textContent = isActive ? '插件已激活' : '插件已停用';
     extensionActiveStatus.style.color = isActive ? '#0078d7' : '#999';
+  }
+
+  // 更新监控状态文本
+  function updateMonitoringStatus(isEnabled) {
+    monitoringStatus.textContent = isEnabled ? '持续监控已启用' : '持续监控已停用';
+    monitoringStatus.style.color = isEnabled ? '#0078d7' : '#999';
   }
 
   // 根据插件状态启用或禁用取消分组按钮

@@ -25,7 +25,12 @@ let settings = {
   excludeDomains: [],
   colorScheme: {
     'default': 'blue'
-  }
+  },
+  // 新增设置项
+  continuousMonitoring: true,     // 持续监控标签状态
+  autoGroupInterval: 5000,        // 自动分组间隔（毫秒）
+  autoSortInterval: 10000,        // 自动排序间隔（毫秒）
+  monitoringEnabled: true         // 是否启用监控
 };
 
 // 可用的标签组颜色
@@ -45,7 +50,21 @@ chrome.storage.sync.get('tabOrganizerSettings', (data) => {
 // Listen for changes to settings
 chrome.storage.onChanged.addListener((changes, namespace) => {
   if (namespace === 'sync' && changes.tabOrganizerSettings) {
+    const oldSettings = settings;
     settings = changes.tabOrganizerSettings.newValue;
+
+    // 检查是否需要更新监控状态
+    const monitoringSettingsChanged =
+      oldSettings.monitoringEnabled !== settings.monitoringEnabled ||
+      oldSettings.extensionActive !== settings.extensionActive ||
+      oldSettings.continuousMonitoring !== settings.continuousMonitoring ||
+      oldSettings.autoGroupInterval !== settings.autoGroupInterval ||
+      oldSettings.autoSortInterval !== settings.autoSortInterval;
+
+    if (monitoringSettingsChanged) {
+      console.log('监控设置已更改，更新监控状态');
+      updateMonitoringStatus();
+    }
   }
 });
 
@@ -677,6 +696,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       }).catch(error => {
         console.error('Error grouping tabs after activation:', error);
       });
+
+      // 更新监控状态
+      updateMonitoringStatus();
+    } else {
+      // 停止监控
+      stopContinuousMonitoring();
     }
 
     sendResponse({
@@ -686,11 +711,127 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
 
+  // 切换持续监控状态
+  if (message.action === 'toggleMonitoring') {
+    console.log('处理 toggleMonitoring 消息');
+    const newState = message.enabled !== undefined ? message.enabled : !settings.monitoringEnabled;
+    settings.monitoringEnabled = newState;
+
+    // 更新监控状态
+    updateMonitoringStatus();
+
+    sendResponse({
+      success: true,
+      monitoringEnabled: settings.monitoringEnabled
+    });
+    return true;
+  }
+
+  // 更新监控设置
+  if (message.action === 'updateMonitoringSettings') {
+    console.log('处理 updateMonitoringSettings 消息');
+
+    if (message.autoGroupInterval !== undefined) {
+      settings.autoGroupInterval = message.autoGroupInterval;
+    }
+
+    if (message.autoSortInterval !== undefined) {
+      settings.autoSortInterval = message.autoSortInterval;
+    }
+
+    // 更新监控状态
+    updateMonitoringStatus();
+
+    sendResponse({
+      success: true,
+      settings: settings
+    });
+    return true;
+  }
+
   // 未知消息
   console.warn('收到未知消息:', message);
   sendResponse({ success: false, error: 'Unknown action' });
   return true;
 });
+
+// 定时器ID
+let autoGroupTimerId = null;
+let autoSortTimerId = null;
+
+// 启动持续监控
+function startContinuousMonitoring() {
+  if (!settings.monitoringEnabled || !settings.extensionActive) {
+    console.log('持续监控未启用或扩展未激活，不启动监控');
+    return;
+  }
+
+  console.log('启动持续监控');
+
+  // 停止现有的定时器（如果有）
+  stopContinuousMonitoring();
+
+  // 启动自动分组定时器
+  if (settings.continuousMonitoring && settings.autoGroupInterval > 0) {
+    autoGroupTimerId = setInterval(async () => {
+      if (settings.extensionActive && !manualUngrouping) {
+        console.log('执行自动分组');
+        try {
+          await groupTabsByDomain();
+        } catch (error) {
+          console.error('自动分组出错:', error);
+        }
+      }
+    }, settings.autoGroupInterval);
+    console.log('自动分组定时器已启动，间隔:', settings.autoGroupInterval, 'ms');
+  }
+
+  // 启动自动排序定时器
+  if (settings.continuousMonitoring && settings.autoSortInterval > 0 && settings.enableGroupSorting) {
+    autoSortTimerId = setInterval(async () => {
+      if (settings.extensionActive && !manualUngrouping) {
+        console.log('执行自动排序');
+        try {
+          await sortTabGroups();
+        } catch (error) {
+          console.error('自动排序出错:', error);
+        }
+      }
+    }, settings.autoSortInterval);
+    console.log('自动排序定时器已启动，间隔:', settings.autoSortInterval, 'ms');
+  }
+}
+
+// 停止持续监控
+function stopContinuousMonitoring() {
+  console.log('停止持续监控');
+
+  // 清除自动分组定时器
+  if (autoGroupTimerId) {
+    clearInterval(autoGroupTimerId);
+    autoGroupTimerId = null;
+    console.log('自动分组定时器已停止');
+  }
+
+  // 清除自动排序定时器
+  if (autoSortTimerId) {
+    clearInterval(autoSortTimerId);
+    autoSortTimerId = null;
+    console.log('自动排序定时器已停止');
+  }
+}
+
+// 根据设置更新监控状态
+function updateMonitoringStatus() {
+  if (settings.monitoringEnabled && settings.extensionActive) {
+    startContinuousMonitoring();
+  } else {
+    stopContinuousMonitoring();
+  }
+}
+
+// 在扩展初始化时启动监控
+updateMonitoringStatus();
 
 // 输出初始化完成消息
 console.log('Edge Tab Organizer - Background Service Worker 初始化完成');

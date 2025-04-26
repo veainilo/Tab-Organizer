@@ -578,10 +578,22 @@ document.addEventListener('DOMContentLoaded', () => {
     container.appendChild(item);
   }
 
+  // 保存标签组展开状态的对象
+  const groupExpandStates = {};
+
   // Function to load and display current tab groups
   async function loadTabGroups() {
     console.log('加载标签组列表');
     try {
+      // 保存当前展开状态（如果有）
+      const expandButtons = document.querySelectorAll('.expand-button');
+      expandButtons.forEach(button => {
+        const groupId = button.dataset.groupId;
+        if (groupId) {
+          groupExpandStates[groupId] = button.dataset.expanded === 'true';
+        }
+      });
+
       // Get all tab groups in the current window
       const groups = await chrome.tabGroups.query({ windowId: WINDOW_ID_CURRENT });
       console.log('查询到的标签组:', groups);
@@ -761,9 +773,46 @@ document.addEventListener('DOMContentLoaded', () => {
       sortControlRow.className = 'sort-control-row';
       sortControlRow.appendChild(sortControls);
 
-      // 添加标题行和排序控制行
+      // 创建快速操作行
+      const quickActionsRow = document.createElement('div');
+      quickActionsRow.className = 'quick-actions-row';
+
+      // 创建展开所有按钮
+      const expandAllButton = document.createElement('button');
+      expandAllButton.className = 'quick-action-button';
+      expandAllButton.title = '展开所有标签组';
+      expandAllButton.innerHTML = '&#9660; 展开所有';
+      expandAllButton.addEventListener('click', () => {
+        const expandButtons = document.querySelectorAll('.expand-button');
+        expandButtons.forEach(button => {
+          if (button.dataset.expanded !== 'true') {
+            button.click(); // 触发展开
+          }
+        });
+      });
+
+      // 创建折叠所有按钮
+      const collapseAllButton = document.createElement('button');
+      collapseAllButton.className = 'quick-action-button';
+      collapseAllButton.title = '折叠所有标签组';
+      collapseAllButton.innerHTML = '&#9650; 折叠所有';
+      collapseAllButton.addEventListener('click', () => {
+        const expandButtons = document.querySelectorAll('.expand-button');
+        expandButtons.forEach(button => {
+          if (button.dataset.expanded === 'true') {
+            button.click(); // 触发折叠
+          }
+        });
+      });
+
+      // 添加按钮到快速操作行
+      quickActionsRow.appendChild(expandAllButton);
+      quickActionsRow.appendChild(collapseAllButton);
+
+      // 添加标题行、排序控制行和快速操作行
       groupListElement.appendChild(headerRow);
       groupListElement.appendChild(sortControlRow);
+      groupListElement.appendChild(quickActionsRow);
 
       // Add each group to the list in the sorted order
       sortedGroups.forEach((group, index) => {
@@ -865,14 +914,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const expandButton = document.createElement('button');
         expandButton.className = 'group-action-button expand-button';
         expandButton.title = '展开/折叠标签列表';
-        expandButton.innerHTML = '&#9660;'; // 向下箭头
-        expandButton.dataset.expanded = 'false';
+        expandButton.dataset.groupId = group.id.toString();
+
+        // 恢复之前的展开状态（如果有）
+        const wasExpanded = groupExpandStates[group.id.toString()] || false;
+        expandButton.dataset.expanded = wasExpanded.toString();
+        expandButton.innerHTML = wasExpanded ? '&#9650;' : '&#9660;'; // 向上或向下箭头
+
         actionsContainer.appendChild(expandButton);
 
-        // 创建标签列表容器（初始隐藏）
+        // 创建标签列表容器
         const tabListContainer = document.createElement('div');
         tabListContainer.className = 'tab-list-container';
-        tabListContainer.style.display = 'none';
+        tabListContainer.style.display = wasExpanded ? 'block' : 'none';
 
         // 获取组内标签页
         const groupTabs = tabs.filter(tab => tab.groupId === group.id);

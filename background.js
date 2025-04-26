@@ -4,11 +4,18 @@ let settings = {
   autoGroupOnCreation: true,
   groupByRootDomain: true,  // 按根域名分组
   ignoreTLD: true,          // 忽略顶级域名（如.com, .org等）
+  useDynamicColors: true,   // 动态分配颜色
   excludeDomains: [],
   colorScheme: {
     'default': 'blue'
   }
 };
+
+// 可用的标签组颜色
+const availableColors = ['blue', 'red', 'yellow', 'green', 'pink', 'purple', 'cyan', 'orange', 'grey'];
+
+// 域名到颜色的映射缓存
+const domainColorCache = {};
 
 // Define constant for ungrouped tabs
 const TAB_GROUP_ID_NONE = -1;
@@ -71,6 +78,38 @@ function extractRootDomain(hostname) {
     console.error('Error extracting root domain:', e);
     return hostname; // 出错时返回原始域名
   }
+}
+
+// 为域名生成一致的颜色
+function getColorForDomain(domain) {
+  // 如果已经有缓存的颜色，直接返回
+  if (domainColorCache[domain]) {
+    return domainColorCache[domain];
+  }
+
+  // 如果用户在设置中指定了颜色，使用用户设置
+  if (settings.colorScheme[domain]) {
+    domainColorCache[domain] = settings.colorScheme[domain];
+    return domainColorCache[domain];
+  }
+
+  // 如果启用了动态颜色分配
+  if (settings.useDynamicColors) {
+    // 使用简单的哈希函数为域名生成一个数字
+    let hash = 0;
+    for (let i = 0; i < domain.length; i++) {
+      hash = ((hash << 5) - hash) + domain.charCodeAt(i);
+      hash |= 0; // 转换为32位整数
+    }
+
+    // 使用哈希值选择一个颜色
+    const colorIndex = Math.abs(hash) % availableColors.length;
+    domainColorCache[domain] = availableColors[colorIndex];
+    return domainColorCache[domain];
+  }
+
+  // 默认返回蓝色
+  return settings.colorScheme['default'] || 'blue';
 }
 
 // Get domain for grouping based on settings
@@ -140,8 +179,7 @@ async function groupTabsByDomain() {
     for (const domain in domainGroups) {
       const tabIds = domainGroups[domain];
 
-      // Skip if only one tab for this domain
-      if (tabIds.length < 2) continue;
+      // 不再跳过单个标签页，所有标签页都分组
 
       // Check if any of these tabs are already in a group with the same domain
       let existingGroupId = null;
@@ -165,7 +203,7 @@ async function groupTabsByDomain() {
         const groupId = await chrome.tabs.group({ tabIds });
 
         // Set group title and color
-        const color = settings.colorScheme[domain] || settings.colorScheme['default'] || 'blue';
+        const color = getColorForDomain(domain);
         await chrome.tabGroups.update(groupId, {
           title: domain,
           color: color
@@ -218,18 +256,18 @@ chrome.tabs.onCreated.addListener(async (tab) => {
           getDomainForGrouping(t.url) === domain
         );
 
-        if (sameDomainTabs.length > 0) {
-          // Create new group with all tabs of this domain
-          const tabIds = [tab.id, ...sameDomainTabs.map(t => t.id)];
-          const groupId = await chrome.tabs.group({ tabIds });
+        // 即使没有其他相同域名的标签页，也创建组
+        const tabIds = sameDomainTabs.length > 0 ?
+          [tab.id, ...sameDomainTabs.map(t => t.id)] : [tab.id];
 
-          // Set group title and color
-          const color = settings.colorScheme[domain] || settings.colorScheme['default'] || 'blue';
-          await chrome.tabGroups.update(groupId, {
-            title: domain,
-            color: color
-          });
-        }
+        const groupId = await chrome.tabs.group({ tabIds });
+
+        // Set group title and color
+        const color = getColorForDomain(domain);
+        await chrome.tabGroups.update(groupId, {
+          title: domain,
+          color: color
+        });
       }
     } catch (error) {
       console.error('Error handling new tab:', error);
@@ -288,18 +326,18 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
           getDomainForGrouping(t.url) === domain
         );
 
-        if (sameDomainTabs.length > 0) {
-          // Create new group with all tabs of this domain
-          const tabIds = [tabId, ...sameDomainTabs.map(t => t.id)];
-          const groupId = await chrome.tabs.group({ tabIds });
+        // 即使没有其他相同域名的标签页，也创建组
+        const tabIds = sameDomainTabs.length > 0 ?
+          [tabId, ...sameDomainTabs.map(t => t.id)] : [tabId];
 
-          // Set group title and color
-          const color = settings.colorScheme[domain] || settings.colorScheme['default'] || 'blue';
-          await chrome.tabGroups.update(groupId, {
-            title: domain,
-            color: color
-          });
-        }
+        const groupId = await chrome.tabs.group({ tabIds });
+
+        // Set group title and color
+        const color = getColorForDomain(domain);
+        await chrome.tabGroups.update(groupId, {
+          title: domain,
+          color: color
+        });
       }
     } catch (error) {
       console.error('Error handling tab update:', error);

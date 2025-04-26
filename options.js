@@ -4,6 +4,7 @@ let settings = {
   autoGroupOnCreation: true,
   groupByRootDomain: true,  // 按根域名分组
   ignoreTLD: true,          // 忽略顶级域名（如.com, .org等）
+  useDynamicColors: true,   // 动态分配颜色
   excludeDomains: [],
   colorScheme: {
     'default': 'blue'
@@ -14,7 +15,8 @@ let settings = {
 let autoGroupByDomainCheckbox;
 let autoGroupOnCreationCheckbox;
 let groupByRootDomainCheckbox;
-let ignoreTLDCheckbox;  // 新增
+let ignoreTLDCheckbox;
+let useDynamicColorsCheckbox;  // 新增
 let domainListElement;
 let noDomainsElement;
 let newDomainInput;
@@ -31,7 +33,8 @@ document.addEventListener('DOMContentLoaded', () => {
   autoGroupByDomainCheckbox = document.getElementById('autoGroupByDomain');
   autoGroupOnCreationCheckbox = document.getElementById('autoGroupOnCreation');
   groupByRootDomainCheckbox = document.getElementById('groupByRootDomain');
-  ignoreTLDCheckbox = document.getElementById('ignoreTLD');  // 新增
+  ignoreTLDCheckbox = document.getElementById('ignoreTLD');
+  useDynamicColorsCheckbox = document.getElementById('useDynamicColors');  // 新增
   domainListElement = document.getElementById('domainList');
   noDomainsElement = document.getElementById('noDomains');
   newDomainInput = document.getElementById('newDomain');
@@ -77,6 +80,7 @@ function updateUI() {
   autoGroupOnCreationCheckbox.checked = settings.autoGroupOnCreation;
   groupByRootDomainCheckbox.checked = settings.groupByRootDomain;
   ignoreTLDCheckbox.checked = settings.ignoreTLD;
+  useDynamicColorsCheckbox.checked = settings.useDynamicColors;
 
   // Update excluded domains list
   updateDomainList();
@@ -228,6 +232,7 @@ function saveSettings() {
   settings.autoGroupOnCreation = autoGroupOnCreationCheckbox.checked;
   settings.groupByRootDomain = groupByRootDomainCheckbox.checked;
   settings.ignoreTLD = ignoreTLDCheckbox.checked;
+  settings.useDynamicColors = useDynamicColorsCheckbox.checked;
 
   // Get default color
   settings.colorScheme['default'] = defaultColorSelect.value;

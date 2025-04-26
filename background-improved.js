@@ -184,12 +184,13 @@ function getColorForDomain(domain) {
 
 // 按域名分组标签页
 async function groupTabsByDomain() {
-  console.log('开始按域名分组标签页 - 函数开始执行');
+  console.log('开始按域名分组标签页 - 函数开始执行', new Date().toISOString());
   console.log('当前设置:', settings);
   try {
     // 获取当前窗口的所有标签页
+    console.log('准备查询当前窗口的所有标签页', new Date().toISOString());
     const tabs = await chrome.tabs.query({ currentWindow: true });
-    console.log('查询到的标签页:', tabs);
+    console.log('查询到的标签页:', tabs.length, '个', new Date().toISOString());
 
     // 按域名分组
     const domainGroups = {};
@@ -232,34 +233,42 @@ async function groupTabsByDomain() {
     // 创建或更新标签组
     for (const domain in domainGroups) {
       const tabIds = domainGroups[domain];
-      console.log('处理域名:', domain, '标签页IDs:', tabIds);
+      console.log('处理域名:', domain, '标签页IDs:', tabIds, new Date().toISOString());
 
       // 不再跳过单个标签页，所有标签页都分组
 
       // Check if any of these tabs are already in a group with the same domain
       let existingGroupId = null;
 
-      for (const tabId of tabIds) {
-        const tab = await chrome.tabs.get(tabId);
-        if (tab.groupId && tab.groupId !== TAB_GROUP_ID_NONE) {
+      try {
+        for (const tabId of tabIds) {
           try {
-            const group = await chrome.tabGroups.get(tab.groupId);
-            console.log('标签页已在组中:', tab, '组:', group);
-            if (group.title === domain) {
-              existingGroupId = tab.groupId;
-              console.log('找到现有组:', existingGroupId);
-              break;
+            const tab = await chrome.tabs.get(tabId);
+            if (tab.groupId && tab.groupId !== TAB_GROUP_ID_NONE) {
+              try {
+                const group = await chrome.tabGroups.get(tab.groupId);
+                console.log('标签页已在组中:', tab.id, '组:', group.id, group.title, new Date().toISOString());
+                if (group.title === domain) {
+                  existingGroupId = tab.groupId;
+                  console.log('找到现有组:', existingGroupId, new Date().toISOString());
+                  break;
+                }
+              } catch (error) {
+                console.error('获取标签组信息失败:', error, new Date().toISOString());
+              }
             }
-          } catch (error) {
-            console.error('获取标签组信息失败:', error);
+          } catch (tabError) {
+            console.error('获取标签页信息失败:', tabError, new Date().toISOString());
           }
         }
-      }
 
-      // 创建或更新标签组
-      console.log('创建或更新标签组:', domain, '使用现有组ID:', existingGroupId);
-      const groupId = await createOrUpdateTabGroup(tabIds, domain, existingGroupId);
-      console.log('创建或更新标签组完成, 组ID:', groupId);
+        // 创建或更新标签组
+        console.log('准备创建或更新标签组:', domain, '使用现有组ID:', existingGroupId, new Date().toISOString());
+        const groupId = await createOrUpdateTabGroup(tabIds, domain, existingGroupId);
+        console.log('创建或更新标签组完成, 组ID:', groupId, new Date().toISOString());
+      } catch (domainError) {
+        console.error('处理域名时出错:', domain, domainError, new Date().toISOString());
+      }
     }
 
     return true;
@@ -271,11 +280,11 @@ async function groupTabsByDomain() {
 
 // 创建或更新标签组，并应用排序
 async function createOrUpdateTabGroup(tabIds, domain, existingGroupId = null) {
-  console.log('创建或更新标签组 - 标签IDs:', tabIds, '标题:', domain, '现有组ID:', existingGroupId);
+  console.log('创建或更新标签组 - 标签IDs:', tabIds, '标题:', domain, '现有组ID:', existingGroupId, new Date().toISOString());
 
   // 检查 tabIds 是否为空
   if (!tabIds || tabIds.length === 0) {
-    console.error('Error: tabIds is empty or null');
+    console.error('Error: tabIds is empty or null', new Date().toISOString());
     return null;
   }
 
@@ -284,27 +293,53 @@ async function createOrUpdateTabGroup(tabIds, domain, existingGroupId = null) {
 
     if (existingGroupId) {
       // 添加到现有组
-      console.log('添加标签到现有组:', tabIds, '-> 组ID:', existingGroupId);
-      await chrome.tabs.group({ tabIds, groupId: existingGroupId });
-      groupId = existingGroupId;
-      console.log('标签已添加到现有组');
+      console.log('添加标签到现有组:', tabIds, '-> 组ID:', existingGroupId, new Date().toISOString());
+      try {
+        await chrome.tabs.group({ tabIds, groupId: existingGroupId });
+        groupId = existingGroupId;
+        console.log('标签已添加到现有组', new Date().toISOString());
+      } catch (groupError) {
+        console.error('添加标签到现有组失败:', groupError, new Date().toISOString());
+
+        // 尝试创建新组
+        console.log('尝试创建新组', new Date().toISOString());
+        groupId = await chrome.tabs.group({ tabIds });
+        console.log('新组创建成功，ID:', groupId, new Date().toISOString());
+
+        // 记录组创建时间
+        groupCreateTimes[groupId] = Date.now();
+
+        // 设置组标题和颜色
+        const color = getColorForDomain(domain);
+        console.log('为域名设置颜色:', domain, '-> 颜色:', color, new Date().toISOString());
+        await chrome.tabGroups.update(groupId, {
+          title: domain,
+          color: color
+        });
+        console.log('组标题和颜色已设置', new Date().toISOString());
+      }
     } else {
       // 创建新组
-      console.log('创建新标签组，标签IDs:', tabIds);
-      groupId = await chrome.tabs.group({ tabIds });
-      console.log('新组创建成功，ID:', groupId);
+      console.log('创建新标签组，标签IDs:', tabIds, new Date().toISOString());
+      try {
+        groupId = await chrome.tabs.group({ tabIds });
+        console.log('新组创建成功，ID:', groupId, new Date().toISOString());
 
-      // 记录组创建时间
-      groupCreateTimes[groupId] = Date.now();
+        // 记录组创建时间
+        groupCreateTimes[groupId] = Date.now();
 
-      // 设置组标题和颜色
-      const color = getColorForDomain(domain);
-      console.log('为域名设置颜色:', domain, '-> 颜色:', color);
-      await chrome.tabGroups.update(groupId, {
-        title: domain,
-        color: color
-      });
-      console.log('组标题和颜色已设置');
+        // 设置组标题和颜色
+        const color = getColorForDomain(domain);
+        console.log('为域名设置颜色:', domain, '-> 颜色:', color, new Date().toISOString());
+        await chrome.tabGroups.update(groupId, {
+          title: domain,
+          color: color
+        });
+        console.log('组标题和颜色已设置', new Date().toISOString());
+      } catch (createError) {
+        console.error('创建新组失败:', createError, new Date().toISOString());
+        return null;
+      }
     }
 
     // 更新组的最后访问时间
@@ -312,14 +347,19 @@ async function createOrUpdateTabGroup(tabIds, domain, existingGroupId = null) {
 
     // 如果启用了标签排序，对组内标签进行排序
     if (settings.enableTabSorting) {
-      console.log('对组内标签进行排序, 组ID:', groupId);
-      await sortTabsInGroup(groupId);
+      console.log('对组内标签进行排序, 组ID:', groupId, new Date().toISOString());
+      try {
+        await sortTabsInGroup(groupId);
+        console.log('组内标签排序完成', new Date().toISOString());
+      } catch (sortError) {
+        console.error('组内标签排序失败:', sortError, new Date().toISOString());
+      }
     }
 
-    console.log('标签组创建/更新成功, ID:', groupId);
+    console.log('标签组创建/更新成功, ID:', groupId, new Date().toISOString());
     return groupId;
   } catch (error) {
-    console.error('Error creating or updating tab group:', error);
+    console.error('Error creating or updating tab group:', error, new Date().toISOString());
     return null;
   }
 }
@@ -711,37 +751,49 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   // 按域名分组标签页
   if (message.action === 'groupByDomain') {
-    console.log('处理 groupByDomain 消息 - 开始');
+    console.log('处理 groupByDomain 消息 - 开始', new Date().toISOString());
 
     // 立即发送一个初始响应，表示消息已收到
-    sendResponse({ success: true, status: 'processing' });
+    try {
+      sendResponse({ success: true, status: 'processing' });
+      console.log('已发送初始响应', new Date().toISOString());
+    } catch (err) {
+      console.error('发送初始响应失败:', err);
+    }
 
     // 然后异步执行分组操作
-    setTimeout(async () => {
+    (async () => {
       try {
-        console.log('开始执行 groupTabsByDomain 函数');
+        console.log('开始执行 groupTabsByDomain 函数', new Date().toISOString());
         const result = await groupTabsByDomain();
-        console.log('groupTabsByDomain 执行完成，结果:', result);
+        console.log('groupTabsByDomain 执行完成，结果:', result, new Date().toISOString());
 
         // 由于我们已经发送了响应，这里不需要再次发送
         // 如果需要通知前端操作完成，可以使用 chrome.runtime.sendMessage
-        chrome.runtime.sendMessage({
-          action: 'groupByDomainComplete',
-          success: true
-        }).catch(err => {
+        try {
+          console.log('准备发送完成消息', new Date().toISOString());
+          await chrome.runtime.sendMessage({
+            action: 'groupByDomainComplete',
+            success: true
+          });
+          console.log('完成消息已发送', new Date().toISOString());
+        } catch (err) {
           console.error('发送完成消息失败:', err);
-        });
+        }
       } catch (error) {
-        console.error('执行 groupTabsByDomain 时出错:', error);
-        chrome.runtime.sendMessage({
-          action: 'groupByDomainComplete',
-          success: false,
-          error: error.message
-        }).catch(err => {
+        console.error('执行 groupTabsByDomain 时出错:', error, new Date().toISOString());
+        try {
+          await chrome.runtime.sendMessage({
+            action: 'groupByDomainComplete',
+            success: false,
+            error: error.message
+          });
+          console.log('错误消息已发送', new Date().toISOString());
+        } catch (err) {
           console.error('发送错误消息失败:', err);
-        });
+        }
       }
-    }, 0);
+    })();
 
     return true;
   }

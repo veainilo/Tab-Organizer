@@ -1,3 +1,8 @@
+// Helper function to get localized message
+function getMessage(messageName, substitutions) {
+  return chrome.i18n.getMessage(messageName, substitutions);
+}
+
 // Default settings
 let settings = {
   autoGroupByDomain: true,

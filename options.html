@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Edge Tab Organizer - Settings</title>
+  <title>__MSG_settingsTitle__</title>
   <meta charset="UTF-8">
   <style>
     body {
@@ -162,86 +162,86 @@
   </style>
 </head>
 <body>
-  <h1>Edge Tab Organizer - Settings</h1>
+  <h1>__MSG_settingsTitle__</h1>
 
   <div class="section">
-    <div class="section-title">Automatic Grouping</div>
+    <div class="section-title">__MSG_automaticGrouping__</div>
 
     <div class="option">
       <label>
         <input type="checkbox" id="autoGroupByDomain">
-        Automatically group tabs by domain
+        __MSG_autoGroupByDomain__
       </label>
     </div>
 
     <div class="option">
       <label>
         <input type="checkbox" id="autoGroupOnCreation">
-        Automatically group new tabs when created
+        __MSG_autoGroupOnCreation__
       </label>
     </div>
 
     <div class="option">
       <label>
         <input type="checkbox" id="groupByRootDomain">
-        Group by root domain (e.g., group docs.example.com and forum.example.com together)
+        __MSG_groupByRootDomain__
       </label>
     </div>
 
     <div class="option">
       <label>
         <input type="checkbox" id="ignoreTLD">
-        Ignore top-level domain (e.g., group example.com and example.org together)
+        __MSG_ignoreTLD__
       </label>
     </div>
 
     <div class="option">
       <label>
         <input type="checkbox" id="useDynamicColors">
-        Use dynamic colors (automatically assign different colors to different domains)
+        __MSG_useDynamicColors__
       </label>
     </div>
   </div>
 
   <div class="section">
-    <div class="section-title">Excluded Domains</div>
-    <p>Tabs from these domains will not be automatically grouped:</p>
+    <div class="section-title">__MSG_excludedDomains__</div>
+    <p>__MSG_excludedDomainsDesc__</p>
 
     <div id="domainList" class="domain-list">
-      <div id="noDomains">No excluded domains</div>
+      <div id="noDomains">__MSG_noDomains__</div>
     </div>
 
     <div class="domain-input">
-      <input type="text" id="newDomain" placeholder="Enter domain (e.g., example.com)">
-      <button id="addDomain">Add Domain</button>
+      <input type="text" id="newDomain" placeholder="__MSG_enterDomain__">
+      <button id="addDomain">__MSG_addDomain__</button>
     </div>
   </div>
 
   <div class="section">
-    <div class="section-title">Color Scheme</div>
-    <p>Customize colors for specific domains:</p>
+    <div class="section-title">__MSG_colorScheme__</div>
+    <p>__MSG_colorSchemeDesc__</p>
 
     <div id="colorMappings" class="color-mapping">
       <div class="color-item">
         <input type="text" value="default" disabled>
         <select id="defaultColor">
-          <option value="grey">Grey</option>
-          <option value="blue" selected>Blue</option>
-          <option value="red">Red</option>
-          <option value="yellow">Yellow</option>
-          <option value="green">Green</option>
-          <option value="pink">Pink</option>
-          <option value="purple">Purple</option>
-          <option value="cyan">Cyan</option>
-          <option value="orange">Orange</option>
+          <option value="grey">__MSG_grey__</option>
+          <option value="blue" selected>__MSG_blue__</option>
+          <option value="red">__MSG_red__</option>
+          <option value="yellow">__MSG_yellow__</option>
+          <option value="green">__MSG_green__</option>
+          <option value="pink">__MSG_pink__</option>
+          <option value="purple">__MSG_purple__</option>
+          <option value="cyan">__MSG_cyan__</option>
+          <option value="orange">__MSG_orange__</option>
         </select>
       </div>
     </div>
 
-    <button id="addColorMapping" class="add-color-mapping">Add Domain Color</button>
+    <button id="addColorMapping" class="add-color-mapping">__MSG_addDomainColor__</button>
   </div>
 
-  <button id="saveSettings" class="save-button">Save Settings</button>
+  <button id="saveSettings" class="save-button">__MSG_saveSettings__</button>
 
   <div id="status" class="status"></div>
 

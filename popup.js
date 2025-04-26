@@ -2,6 +2,11 @@
 const TAB_GROUP_ID_NONE = -1;
 const WINDOW_ID_CURRENT = -2;
 
+// Helper function to get localized message
+function getMessage(messageName, substitutions) {
+  return chrome.i18n.getMessage(messageName, substitutions);
+}
+
 // Wait for DOM to load
 document.addEventListener('DOMContentLoaded', () => {
   // Get UI elements
@@ -16,27 +21,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Add event listeners
   groupByDomainButton.addEventListener('click', () => {
-    showStatus('Grouping tabs by domain...', 'info');
+    showStatus(getMessage('groupingTabs'), 'info');
 
     chrome.runtime.sendMessage({ action: 'groupByDomain' }, (response) => {
       if (response.success) {
-        showStatus('Tabs grouped successfully!', 'success');
+        showStatus(getMessage('tabsGrouped'), 'success');
         loadTabGroups();
       } else {
-        showStatus('Error grouping tabs: ' + (response.error || 'Unknown error'), 'error');
+        showStatus(getMessage('errorGroupingTabs', [response.error || 'Unknown error']), 'error');
       }
     });
   });
 
   ungroupAllButton.addEventListener('click', () => {
-    showStatus('Ungrouping all tabs...', 'info');
+    showStatus(getMessage('ungroupingTabs'), 'info');
 
     chrome.runtime.sendMessage({ action: 'ungroupAll' }, (response) => {
       if (response.success) {
-        showStatus('Tabs ungrouped successfully!', 'success');
+        showStatus(getMessage('tabsUngrouped'), 'success');
         loadTabGroups();
       } else {
-        showStatus('Error ungrouping tabs: ' + (response.error || 'Unknown error'), 'error');
+        showStatus(getMessage('errorUngroupingTabs', [response.error || 'Unknown error']), 'error');
       }
     });
   });
@@ -96,7 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const groupTitle = document.createElement('span');
         groupTitle.className = 'group-title';
-        groupTitle.textContent = group.title || '(Unnamed group)';
+        groupTitle.textContent = group.title || getMessage('unnamedGroup');
 
         const groupCount = document.createElement('span');
         groupCount.className = 'group-count';
@@ -109,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     } catch (error) {
       console.error('Error loading tab groups:', error);
-      showStatus('Error loading tab groups', 'error');
+      showStatus(getMessage('errorLoadingGroups'), 'error');
     }
   }
 

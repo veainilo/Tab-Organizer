@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "Edge Tab Organizer",
+  "name": "__MSG_extName__",
   "version": "1.0",
-  "description": "Automatically organize tabs using Edge's built-in tab management features",
+  "description": "__MSG_extDescription__",
+  "default_locale": "en",
   "permissions": [
     "tabs",
     "tabGroups",

@@ -1,3 +1,8 @@
+// Helper function to get localized message
+function getMessage(messageName, substitutions) {
+  return chrome.i18n.getMessage(messageName, substitutions);
+}
+
 // Default settings
 let settings = {
   autoGroupByDomain: true,
@@ -113,7 +118,7 @@ function updateDomainList() {
     domainText.textContent = domain;
 
     const removeButton = document.createElement('button');
-    removeButton.textContent = 'Remove';
+    removeButton.textContent = getMessage('remove');
     removeButton.addEventListener('click', () => {
       removeDomain(domain);
     });
@@ -130,13 +135,13 @@ function addExcludedDomain() {
   const domain = newDomainInput.value.trim();
 
   if (!domain) {
-    showStatus('Please enter a domain', 'error');
+    showStatus(getMessage('pleaseEnterDomain'), 'error');
     return;
   }
 
   // Check if domain is already in the list
   if (settings.excludeDomains.includes(domain)) {
-    showStatus('Domain is already in the list', 'error');
+    showStatus(getMessage('domainAlreadyInList'), 'error');
     return;
   }
 
@@ -149,7 +154,7 @@ function addExcludedDomain() {
   // Clear input
   newDomainInput.value = '';
 
-  showStatus('Domain added', 'success');
+  showStatus(getMessage('domainAdded'), 'success');
 }
 
 // Remove a domain from the excluded list
@@ -159,7 +164,7 @@ function removeDomain(domain) {
   // Update UI
   updateDomainList();
 
-  showStatus('Domain removed', 'success');
+  showStatus(getMessage('domainRemoved'), 'success');
 }
 
 // Update the color mappings UI
@@ -191,7 +196,7 @@ function addColorMappingToUI(domain, color) {
   const domainInput = document.createElement('input');
   domainInput.type = 'text';
   domainInput.value = domain;
-  domainInput.placeholder = 'Enter domain (e.g., example.com)';
+  domainInput.placeholder = getMessage('enterDomain');
 
   const colorSelect = document.createElement('select');
   const colors = ['grey', 'blue', 'red', 'yellow', 'green', 'pink', 'purple', 'cyan', 'orange'];
@@ -199,13 +204,13 @@ function addColorMappingToUI(domain, color) {
   colors.forEach(c => {
     const option = document.createElement('option');
     option.value = c;
-    option.textContent = c.charAt(0).toUpperCase() + c.slice(1);
+    option.textContent = getMessage(c);
     option.selected = c === color;
     colorSelect.appendChild(option);
   });
 
   const removeButton = document.createElement('button');
-  removeButton.textContent = 'Remove';
+  removeButton.textContent = getMessage('remove');
   removeButton.style.backgroundColor = '#d83b01';
   removeButton.style.color = 'white';
   removeButton.style.border = 'none';
@@ -259,9 +264,9 @@ function saveSettings() {
   // Save to storage
   chrome.storage.sync.set({ tabOrganizerSettings: settings }, () => {
     if (chrome.runtime.lastError) {
-      showStatus('Error saving settings: ' + chrome.runtime.lastError.message, 'error');
+      showStatus(getMessage('errorSavingSettings', [chrome.runtime.lastError.message]), 'error');
     } else {
-      showStatus('Settings saved successfully!', 'success');
+      showStatus(getMessage('settingsSaved'), 'success');
     }
   });
 }

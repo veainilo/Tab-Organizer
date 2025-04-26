@@ -62,7 +62,30 @@ function extractDomain(url) {
 
 // Get domain for grouping based on settings
 function getDomainForGrouping(url) {
-  return extractDomain(url);
+  const fullDomain = extractDomain(url);
+  if (!fullDomain) return '';
+
+  // 提取主域名部分（如cursor, bilibili）
+  const parts = fullDomain.split('.');
+
+  // 处理特殊情况，如github.io, github.com等
+  if (parts.length >= 2) {
+    // 检查是否是二级域名服务，如github.io, xxx.com.cn等
+    if ((parts[parts.length - 2] === 'github' && parts[parts.length - 1] === 'io') ||
+        (parts[parts.length - 2] === 'com' && parts[parts.length - 1] === 'cn')) {
+      // 对于github.io或com.cn这样的情况，返回前一部分
+      if (parts.length >= 3) {
+        return parts[parts.length - 3];
+      }
+      return fullDomain;
+    }
+
+    // 普通情况，返回次级域名（如cursor, bilibili）
+    return parts[parts.length - 2];
+  }
+
+  // 如果无法解析，返回完整域名
+  return fullDomain;
 }
 
 // 为域名获取颜色
@@ -157,13 +180,13 @@ async function ungroupAllTabs() {
     }
 
     console.log('取消分组完成');
-    
+
     // 操作完成后重置标志
     setTimeout(() => {
       manualUngrouping = false;
       console.log('重置手动取消分组标志');
     }, 1000);
-    
+
     return { success: true };
   } catch (error) {
     console.error('Error ungrouping all tabs:', error);

@@ -255,54 +255,70 @@ async function sortTabGroups() {
       return true;
     }
 
-    // 获取每个组的智能排序分数
-    const groupScores = {};
+    // 获取每个组的信息，包括组内标签页和排序分数
+    const groupInfo = {};
 
     for (const group of groups) {
-      // 获取组内标签页数量
+      // 获取组内标签页
       const tabs = await chrome.tabs.query({ groupId: group.id });
-      const size = tabs.length;
 
-      // 计算智能排序分数（简化版，仅使用标签页数量）
-      const score = size / 10; // 最多10个标签页得满分
+      // 计算智能排序分数
+      let score;
 
-      groupScores[group.id] = score;
+      if (settings.groupSortingMethod === 'title') {
+        // 按标题排序
+        score = group.title || '';
+      } else if (settings.groupSortingMethod === 'size') {
+        // 按大小排序
+        score = tabs.length;
+      } else {
+        // 默认使用智能排序（基于标签页数量）
+        score = tabs.length / 10; // 最多10个标签页得满分
+      }
+
+      groupInfo[group.id] = {
+        group: group,
+        tabs: tabs,
+        score: score
+      };
     }
 
     // 根据分数对组进行排序
     let sortedGroups = [...groups];
     sortedGroups.sort((a, b) => {
-      const scoreA = groupScores[a.id] || 0;
-      const scoreB = groupScores[b.id] || 0;
+      const infoA = groupInfo[a.id];
+      const infoB = groupInfo[b.id];
 
-      return settings.groupSortAscending ?
-        scoreA - scoreB :
-        scoreB - scoreA;
+      if (settings.groupSortingMethod === 'title') {
+        // 字符串比较
+        return settings.groupSortAscending ?
+          String(infoA.score).localeCompare(String(infoB.score)) :
+          String(infoB.score).localeCompare(String(infoA.score));
+      } else {
+        // 数值比较
+        return settings.groupSortAscending ?
+          infoA.score - infoB.score :
+          infoB.score - infoA.score;
+      }
     });
 
-    console.log('排序后的标签组:', sortedGroups.length, '个');
+    console.log('排序后的标签组:', sortedGroups.map(g => g.title));
 
-    // 移动标签组
-    const newPositions = {};
-    let currentIndex = 0;
-
-    // 计算每个组的新起始位置
+    // 收集所有标签页，按排序后的组顺序
+    const allTabs = [];
     for (const group of sortedGroups) {
-      const tabs = await chrome.tabs.query({ groupId: group.id });
-      newPositions[group.id] = currentIndex;
-      currentIndex += tabs.length;
+      const tabs = groupInfo[group.id].tabs;
+      allTabs.push(...tabs);
     }
 
-    // 从后向前移动标签页
-    for (let i = sortedGroups.length - 1; i >= 0; i--) {
-      const group = sortedGroups[i];
-      const tabs = await chrome.tabs.query({ groupId: group.id });
-
-      if (tabs.length > 0) {
-        const tabIds = tabs.map(tab => tab.id);
-        await chrome.tabs.move(tabIds, { index: newPositions[group.id] });
-      }
+    if (allTabs.length === 0) {
+      console.log('没有标签页，无需排序');
+      return true;
     }
+
+    // 一次性移动所有标签页
+    const tabIds = allTabs.map(tab => tab.id);
+    await chrome.tabs.move(tabIds, { index: 0 });
 
     console.log('标签组排序完成');
     return true;

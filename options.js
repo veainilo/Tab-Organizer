@@ -13,6 +13,9 @@ let settings = {
   enableTabSorting: true,   // 启用标签排序
   sortingMethod: 'domain',  // 排序方法
   sortAscending: true,      // 升序排序
+  enableGroupSorting: true, // 启用标签组排序
+  groupSortingMethod: 'title', // 标签组排序方法
+  groupSortAscending: true, // 标签组升序排序
   excludeDomains: [],
   colorScheme: {
     'default': 'blue'
@@ -28,6 +31,9 @@ let useDynamicColorsCheckbox;
 let enableTabSortingCheckbox;
 let sortingMethodSelect;
 let sortAscendingCheckbox;
+let enableGroupSortingCheckbox;
+let groupSortingMethodSelect;
+let groupSortAscendingCheckbox;
 let domainListElement;
 let noDomainsElement;
 let newDomainInput;
@@ -66,6 +72,9 @@ document.addEventListener('DOMContentLoaded', () => {
   enableTabSortingCheckbox = document.getElementById('enableTabSorting');
   sortingMethodSelect = document.getElementById('sortingMethod');
   sortAscendingCheckbox = document.getElementById('sortAscending');
+  enableGroupSortingCheckbox = document.getElementById('enableGroupSorting');
+  groupSortingMethodSelect = document.getElementById('groupSortingMethod');
+  groupSortAscendingCheckbox = document.getElementById('groupSortAscending');
   domainListElement = document.getElementById('domainList');
   noDomainsElement = document.getElementById('noDomains');
   newDomainInput = document.getElementById('newDomain');
@@ -113,10 +122,15 @@ function updateUI() {
   ignoreTLDCheckbox.checked = settings.ignoreTLD;
   useDynamicColorsCheckbox.checked = settings.useDynamicColors;
 
-  // Update sorting options
+  // Update tab sorting options
   enableTabSortingCheckbox.checked = settings.enableTabSorting;
   sortingMethodSelect.value = settings.sortingMethod;
   sortAscendingCheckbox.checked = settings.sortAscending;
+
+  // Update group sorting options
+  enableGroupSortingCheckbox.checked = settings.enableGroupSorting;
+  groupSortingMethodSelect.value = settings.groupSortingMethod;
+  groupSortAscendingCheckbox.checked = settings.groupSortAscending;
 
   // Update excluded domains list
   updateDomainList();
@@ -273,10 +287,15 @@ function saveSettings() {
   settings.ignoreTLD = ignoreTLDCheckbox.checked;
   settings.useDynamicColors = useDynamicColorsCheckbox.checked;
 
-  // Get sorting options
+  // Get tab sorting options
   settings.enableTabSorting = enableTabSortingCheckbox.checked;
   settings.sortingMethod = sortingMethodSelect.value;
   settings.sortAscending = sortAscendingCheckbox.checked;
+
+  // Get group sorting options
+  settings.enableGroupSorting = enableGroupSortingCheckbox.checked;
+  settings.groupSortingMethod = groupSortingMethodSelect.value;
+  settings.groupSortAscending = groupSortAscendingCheckbox.checked;
 
   // Get default color
   settings.colorScheme['default'] = defaultColorSelect.value;

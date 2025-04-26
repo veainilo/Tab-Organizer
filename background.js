@@ -217,6 +217,11 @@ const tabCreateTimes = {};
 // 标签页使用频率记录
 const tabUsageCount = {};
 
+// 标签组创建时间记录
+const groupCreateTimes = {};
+// 标签组最后访问时间记录
+const groupLastAccessTimes = {};
+
 // 为域名生成一致的颜色
 function getColorForDomain(domain) {
   // 如果已经有缓存的颜色，直接返回
@@ -707,11 +712,147 @@ async function createOrUpdateTabGroup(tabIds, domain, existingGroupId = null) {
   }
 }
 
-// 监听标签组更新事件，进行排序
+// 对窗口中的所有标签组进行排序
+async function sortTabGroups(windowId = WINDOW_ID_CURRENT) {
+  try {
+    // 如果没有启用标签组排序，直接返回
+    if (!settings.enableGroupSorting) return;
+
+    // 获取窗口中的所有标签组
+    const groups = await chrome.tabGroups.query({ windowId });
+    if (groups.length <= 1) return; // 只有一个组不需要排序
+
+    // 获取每个组的第一个标签页的索引，用于确定组的位置
+    const groupPositions = {};
+    for (const group of groups) {
+      const tabs = await chrome.tabs.query({ groupId: group.id });
+      if (tabs.length > 0) {
+        groupPositions[group.id] = Math.min(...tabs.map(tab => tab.index));
+      }
+    }
+
+    // 根据设置的排序方法对标签组进行排序
+    let sortedGroups = [...groups];
+
+    switch (settings.groupSortingMethod) {
+      case 'title':
+        // 按标题排序
+        sortedGroups.sort((a, b) => {
+          const titleA = a.title || '';
+          const titleB = b.title || '';
+          return settings.groupSortAscending ?
+            titleA.localeCompare(titleB) :
+            titleB.localeCompare(titleA);
+        });
+        break;
+
+      case 'color':
+        // 按颜色排序 (使用预定义的颜色顺序)
+        const colorOrder = {
+          'grey': 0, 'blue': 1, 'red': 2, 'yellow': 3,
+          'green': 4, 'pink': 5, 'purple': 6, 'cyan': 7, 'orange': 8
+        };
+
+        sortedGroups.sort((a, b) => {
+          const colorA = colorOrder[a.color] || 0;
+          const colorB = colorOrder[b.color] || 0;
+          return settings.groupSortAscending ?
+            colorA - colorB :
+            colorB - colorA;
+        });
+        break;
+
+      case 'size':
+        // 按标签页数量排序
+        const groupSizes = {};
+        for (const group of groups) {
+          const tabs = await chrome.tabs.query({ groupId: group.id });
+          groupSizes[group.id] = tabs.length;
+        }
+
+        sortedGroups.sort((a, b) => {
+          const sizeA = groupSizes[a.id] || 0;
+          const sizeB = groupSizes[b.id] || 0;
+          return settings.groupSortAscending ?
+            sizeA - sizeB :
+            sizeB - sizeA;
+        });
+        break;
+
+      case 'createTime':
+        // 按创建时间排序
+        sortedGroups.sort((a, b) => {
+          const timeA = groupCreateTimes[a.id] || 0;
+          const timeB = groupCreateTimes[b.id] || 0;
+          return settings.groupSortAscending ?
+            timeA - timeB :
+            timeB - timeA;
+        });
+        break;
+
+      case 'lastAccessed':
+        // 按最后访问时间排序
+        sortedGroups.sort((a, b) => {
+          const timeA = groupLastAccessTimes[a.id] || 0;
+          const timeB = groupLastAccessTimes[b.id] || 0;
+          return settings.groupSortAscending ?
+            timeA - timeB :
+            timeB - timeA;
+        });
+        break;
+    }
+
+    // 移动标签组
+    // 我们需要计算每个组的新位置，然后移动其中的标签页
+    const newPositions = {};
+    let currentIndex = 0;
+
+    // 首先，按照排序后的顺序计算每个组的新起始位置
+    for (const group of sortedGroups) {
+      const tabs = await chrome.tabs.query({ groupId: group.id });
+      newPositions[group.id] = currentIndex;
+      currentIndex += tabs.length;
+    }
+
+    // 然后，从后向前移动标签页，以避免位置冲突
+    for (let i = sortedGroups.length - 1; i >= 0; i--) {
+      const group = sortedGroups[i];
+      const tabs = await chrome.tabs.query({ groupId: group.id });
+
+      if (tabs.length > 0) {
+        // 获取组内所有标签的ID
+        const tabIds = tabs.map(tab => tab.id);
+
+        // 移动到新位置
+        await chrome.tabs.move(tabIds, { index: newPositions[group.id] });
+      }
+    }
+  } catch (error) {
+    console.error('Error sorting tab groups:', error);
+  }
+}
+
+// 监听标签组更新事件
 chrome.tabGroups.onUpdated.addListener(async (group) => {
+  // 更新标签组最后访问时间
+  groupLastAccessTimes[group.id] = Date.now();
+
+  // 如果启用了标签排序，对组内标签进行排序
   if (settings.enableTabSorting) {
     await sortTabsInGroup(group.id);
   }
+
+  // 如果启用了标签组排序，对窗口中的标签组进行排序
+  if (settings.enableGroupSorting) {
+    await sortTabGroups(group.windowId);
+  }
+});
+
+// 监听标签组创建事件
+chrome.tabGroups.onCreated.addListener((group) => {
+  // 记录标签组创建时间
+  groupCreateTimes[group.id] = Date.now();
+  groupLastAccessTimes[group.id] = Date.now();
 });
 
 // Listen for messages from popup or options page
@@ -748,6 +889,16 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       sendResponse({ success: true });
     }).catch(error => {
       console.error('Error in sortTabGroup:', error);
+      sendResponse({ success: false, error: error.message });
+    });
+    return true; // Indicates async response
+  }
+
+  if (message.action === 'sortTabGroups') {
+    sortTabGroups().then(() => {
+      sendResponse({ success: true });
+    }).catch(error => {
+      console.error('Error in sortTabGroups:', error);
       sendResponse({ success: false, error: error.message });
     });
     return true; // Indicates async response

@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const groupByDomainButton = document.getElementById('groupByDomain');
   const ungroupAllButton = document.getElementById('ungroupAll');
   const sortTabsButton = document.getElementById('sortTabs');
+  const sortGroupsButton = document.getElementById('sortGroups');
   const statusElement = document.getElementById('status');
   const groupListElement = document.getElementById('groupList');
   const noGroupsElement = document.getElementById('noGroups');
@@ -89,6 +90,20 @@ document.addEventListener('DOMContentLoaded', () => {
       } catch (error) {
         console.error('Error sorting tabs:', error);
         showStatus(getMessage('errorSortingTabs', [error.message || 'Unknown error']), 'error');
+      }
+    });
+  });
+
+  sortGroupsButton.addEventListener('click', () => {
+    showStatus(getMessage('sortingGroups'), 'info');
+
+    chrome.runtime.sendMessage({ action: 'sortTabGroups' }, (response) => {
+      if (response && response.success) {
+        showStatus(getMessage('groupsSorted'), 'success');
+        loadTabGroups();
+      } else {
+        const error = response ? response.error : 'Unknown error';
+        showStatus(getMessage('errorSortingGroups', [error]), 'error');
       }
     });
   });

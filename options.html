@@ -231,6 +231,33 @@
         <span data-i18n="sortAscending">Sort in ascending order (A-Z, oldest first)</span>
       </label>
     </div>
+
+    <div class="section-title" data-i18n="groupSorting">Tab Group Sorting</div>
+    <p data-i18n="groupSortingDesc">Choose how tab groups should be sorted:</p>
+
+    <div class="option">
+      <label>
+        <input type="checkbox" id="enableGroupSorting">
+        <span data-i18n="enableGroupSorting">Enable automatic tab group sorting</span>
+      </label>
+    </div>
+
+    <div class="option">
+      <select id="groupSortingMethod">
+        <option value="title" data-i18n="sortByTitle">Sort by title</option>
+        <option value="color" data-i18n="sortByColor">Sort by color</option>
+        <option value="size" data-i18n="sortBySize">Sort by number of tabs</option>
+        <option value="createTime" data-i18n="sortByCreateTime">Sort by creation time</option>
+        <option value="lastAccessed" data-i18n="sortByLastAccessed">Sort by last accessed</option>
+      </select>
+    </div>
+
+    <div class="option">
+      <label>
+        <input type="checkbox" id="groupSortAscending">
+        <span data-i18n="sortAscending">Sort in ascending order (A-Z, smallest first)</span>
+      </label>
+    </div>
   </div>
 
   <div class="section">

@@ -17,15 +17,28 @@ let settings = {
 };
 
 // 可用的标签组颜色
-// Edge 浏览器支持的标签组颜色
+// Edge 浏览器支持的标签组颜色名称
 const baseColors = ['blue', 'red', 'yellow', 'green', 'pink', 'purple', 'cyan', 'orange', 'grey'];
 
-// 用于智能分配的颜色序列
-// 这个顺序经过精心设计，确保相邻颜色有足够的视觉差异
+// 用于智能分配的颜色序列 - 按照视觉差异排序
 const colorSequence = [
-  'blue', 'red', 'green', 'orange', 'purple',
-  'cyan', 'pink', 'yellow', 'grey'
+  'red', 'blue', 'green', 'purple', 'yellow',
+  'cyan', 'orange', 'pink', 'grey'
 ];
+
+// 颜色的视觉特性映射 - 用于计算颜色差异
+// 这些值代表每种颜色在色调、饱和度、亮度空间中的近似位置
+const colorProperties = {
+  'red':    { hue: 0,   saturation: 1.0, brightness: 0.7 },
+  'orange': { hue: 30,  saturation: 1.0, brightness: 0.8 },
+  'yellow': { hue: 60,  saturation: 1.0, brightness: 0.9 },
+  'green':  { hue: 120, saturation: 0.8, brightness: 0.6 },
+  'cyan':   { hue: 180, saturation: 0.7, brightness: 0.7 },
+  'blue':   { hue: 240, saturation: 1.0, brightness: 0.7 },
+  'purple': { hue: 270, saturation: 0.8, brightness: 0.6 },
+  'pink':   { hue: 330, saturation: 0.7, brightness: 0.8 },
+  'grey':   { hue: 0,   saturation: 0.0, brightness: 0.5 }
+};
 
 // 域名到颜色的映射缓存
 const domainColorCache = {};
@@ -101,6 +114,41 @@ function extractRootDomain(hostname) {
   }
 }
 
+// 提取主域名（如 example, google, baidu）
+function extractMainDomain(hostname) {
+  try {
+    // 处理 IP 地址
+    if (/^\d+\.\d+\.\d+\.\d+$/.test(hostname)) {
+      return hostname;
+    }
+
+    // 分割域名部分
+    const parts = hostname.split('.');
+
+    // 如果只有一部分，直接返回
+    if (parts.length === 1) {
+      return hostname;
+    }
+
+    // 处理常见的二级域名，如 co.uk, com.cn 等
+    const commonSecondLevelDomains = ['co', 'com', 'org', 'net', 'edu', 'gov', 'mil'];
+
+    // 如果是三部分或更多，并且倒数第二部分是常见二级域名，并且最后一部分是国家代码
+    if (parts.length >= 3 &&
+        commonSecondLevelDomains.includes(parts[parts.length - 2]) &&
+        parts[parts.length - 1].length <= 3) {
+      // 返回主域名，例如 example.co.uk 返回 example
+      return parts[parts.length - 3];
+    }
+
+    // 对于普通域名，返回主域名，例如 example.com 返回 example
+    return parts[parts.length - 2];
+  } catch (e) {
+    console.error('Error extracting main domain:', e);
+    return hostname; // 出错时返回原始域名
+  }
+}
+
 // 计算两个域名的相似度 (0-1)
 function calculateDomainSimilarity(domain1, domain2) {
   // 如果域名完全相同，相似度为1
@@ -115,6 +163,29 @@ function calculateDomainSimilarity(domain1, domain2) {
   const similarity = lcs / Math.max(domain1.length, domain2.length);
 
   return similarity;
+}
+
+// 计算两种颜色之间的视觉差异 (0-1)
+// 值越大表示颜色差异越大
+function calculateColorDifference(color1, color2) {
+  const props1 = colorProperties[color1];
+  const props2 = colorProperties[color2];
+
+  if (!props1 || !props2) return 0.5; // 默认中等差异
+
+  // 计算色调差异 (考虑色环)
+  let hueDiff = Math.abs(props1.hue - props2.hue);
+  if (hueDiff > 180) hueDiff = 360 - hueDiff;
+  hueDiff = hueDiff / 180; // 归一化到 0-1
+
+  // 计算饱和度差异
+  const satDiff = Math.abs(props1.saturation - props2.saturation);
+
+  // 计算亮度差异
+  const brightDiff = Math.abs(props1.brightness - props2.brightness);
+
+  // 综合差异 (色调差异权重更高)
+  return hueDiff * 0.6 + satDiff * 0.2 + brightDiff * 0.2;
 }
 
 // 计算最长公共子序列长度
@@ -136,6 +207,9 @@ function longestCommonSubsequence(str1, str2) {
   return dp[m][n];
 }
 
+// 主域名到颜色的映射
+const mainDomainColorMap = {};
+
 // 为域名生成一致的颜色
 function getColorForDomain(domain) {
   // 如果已经有缓存的颜色，直接返回
@@ -151,66 +225,112 @@ function getColorForDomain(domain) {
     return domainColorCache[domain];
   }
 
+  // 提取主域名
+  const mainDomain = extractMainDomain(domain);
+
+  // 如果这个主域名已经有分配的颜色，使用相同的颜色
+  if (mainDomainColorMap[mainDomain]) {
+    domainColorCache[domain] = mainDomainColorMap[mainDomain];
+    colorUsageCount[domainColorCache[domain]] = (colorUsageCount[domainColorCache[domain]] || 0) + 1;
+    assignedDomains.push(domain);
+    return domainColorCache[domain];
+  }
+
   // 如果启用了动态颜色分配
   if (settings.useDynamicColors) {
     // 如果是第一个域名，使用第一个颜色
-    if (assignedDomains.length === 0) {
-      domainColorCache[domain] = colorSequence[0];
-      colorUsageCount[colorSequence[0]] += 1;
+    if (Object.keys(mainDomainColorMap).length === 0) {
+      const color = colorSequence[0];
+      mainDomainColorMap[mainDomain] = color;
+      domainColorCache[domain] = color;
+      colorUsageCount[color] = (colorUsageCount[color] || 0) + 1;
       assignedDomains.push(domain);
-      return domainColorCache[domain];
+      return color;
+    }
+
+    // 收集当前使用的颜色及其对应的域名
+    const usedColors = {};
+    const domainsByColor = {};
+
+    for (const existingDomain of assignedDomains) {
+      const existingColor = domainColorCache[existingDomain];
+      usedColors[existingColor] = true;
+
+      if (!domainsByColor[existingColor]) {
+        domainsByColor[existingColor] = [];
+      }
+      domainsByColor[existingColor].push(existingDomain);
     }
 
     // 计算与现有域名的相似度
-    const similarityScores = {};
+    const domainSimilarities = {};
     for (const existingDomain of assignedDomains) {
-      const similarity = calculateDomainSimilarity(domain, existingDomain);
-      const existingColor = domainColorCache[existingDomain];
-
-      if (!similarityScores[existingColor]) {
-        similarityScores[existingColor] = 0;
-      }
-
-      // 相似度越高，分数越高
-      similarityScores[existingColor] += similarity;
+      domainSimilarities[existingDomain] = calculateDomainSimilarity(domain, existingDomain);
     }
 
-    // 为每种颜色计算一个总分数
-    // 分数越低越好（我们想要选择与现有域名最不相似的颜色）
+    // 为每种颜色计算一个适合度分数
+    // 分数越高越好（我们想要选择与相似域名颜色差异最大的颜色）
     const colorScores = {};
-    for (const color of baseColors) {
-      // 基础分数：颜色使用次数
-      colorScores[color] = colorUsageCount[color] * 2;
 
-      // 加上相似度分数
-      if (similarityScores[color]) {
-        colorScores[color] += similarityScores[color] * 10;
+    for (const color of baseColors) {
+      // 初始分数
+      colorScores[color] = 10.0;
+
+      // 减去使用频率惩罚 (使用次数越多，分数越低)
+      colorScores[color] -= (colorUsageCount[color] || 0) * 1.5;
+
+      // 对于每个使用此颜色的域名
+      if (domainsByColor[color]) {
+        for (const existingDomain of domainsByColor[color]) {
+          // 如果新域名与使用此颜色的域名相似，降低此颜色的分数
+          const similarity = domainSimilarities[existingDomain];
+          colorScores[color] -= similarity * 5.0;
+        }
+      }
+
+      // 对于每种已使用的颜色，计算颜色差异奖励
+      for (const usedColor in usedColors) {
+        if (color !== usedColor) {
+          // 颜色差异越大，奖励越高
+          const colorDiff = calculateColorDifference(color, usedColor);
+
+          // 找出使用此颜色的最相似域名
+          let maxSimilarity = 0;
+          if (domainsByColor[usedColor]) {
+            for (const existingDomain of domainsByColor[usedColor]) {
+              maxSimilarity = Math.max(maxSimilarity, domainSimilarities[existingDomain]);
+            }
+          }
+
+          // 如果有相似的域名使用了某种颜色，我们希望新域名使用与该颜色差异大的颜色
+          colorScores[color] += colorDiff * maxSimilarity * 3.0;
+        }
       }
     }
 
-    // 选择分数最低的颜色
+    // 选择分数最高的颜色
     let bestColor = baseColors[0];
-    let lowestScore = colorScores[bestColor];
+    let highestScore = colorScores[bestColor];
 
     for (const color of baseColors) {
-      if (colorScores[color] < lowestScore) {
-        lowestScore = colorScores[color];
+      if (colorScores[color] > highestScore) {
+        highestScore = colorScores[color];
         bestColor = color;
       }
     }
 
-    // 如果所有颜色都已使用，尝试使用颜色序列中的下一个
-    if (assignedDomains.length < colorSequence.length && colorUsageCount[bestColor] > 0) {
-      const nextColorIndex = assignedDomains.length % colorSequence.length;
-      const nextColor = colorSequence[nextColorIndex];
+    // 如果是前几个域名，尝试按照预设的颜色序列分配
+    if (assignedDomains.length < colorSequence.length) {
+      const sequenceColor = colorSequence[assignedDomains.length];
 
-      // 如果下一个颜色的分数不是太高，使用它
-      if (colorScores[nextColor] - lowestScore < 5) {
-        bestColor = nextColor;
+      // 如果序列颜色的分数不是太低，使用它
+      if (colorScores[sequenceColor] > highestScore * 0.8) {
+        bestColor = sequenceColor;
       }
     }
 
     // 保存结果并更新计数
+    mainDomainColorMap[mainDomain] = bestColor; // 保存主域名到颜色的映射
     domainColorCache[domain] = bestColor;
     colorUsageCount[bestColor] += 1;
     assignedDomains.push(domain);

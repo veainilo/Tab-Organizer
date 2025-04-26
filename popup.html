@@ -734,17 +734,28 @@
       border-color: #0078d7;
     }
 
+    .countdown-container {
+      display: flex;
+      align-items: center;
+      margin-left: 10px;
+      background-color: #f0f7ff;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+
+    .countdown-label {
+      font-size: 12px;
+      color: #555;
+      margin-right: 5px;
+    }
+
     .countdown {
-      margin-left: 8px;
       font-size: 12px;
       color: #0078d7;
       font-weight: bold;
-      min-width: 60px;
+      min-width: 40px;
       display: inline-block;
       text-align: center;
-      background-color: #f0f7ff;
-      padding: 2px 6px;
-      border-radius: 10px;
     }
 
     /* 开关样式 */
@@ -857,7 +868,10 @@
             <span>间隔:</span>
             <input type="number" id="monitoringInterval" min="1000" step="1000" value="5000">
             <span>毫秒</span>
-            <span class="countdown" id="monitoringCountdown"></span>
+            <div class="countdown-container">
+              <span class="countdown-label">下次执行:</span>
+              <span class="countdown" id="monitoringCountdown"></span>
+            </div>
           </div>
         </div>
         <div class="toggle-description">自动监控标签页状态并进行分组和排序</div>

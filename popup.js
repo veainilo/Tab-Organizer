@@ -54,6 +54,15 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log('getNextExecutionTime 响应:', response);
       if (response && response.success) {
         nextExecutionTime = response.nextExecutionTime;
+        // 确保时间是有效的
+        if (nextExecutionTime > 0) {
+          const now = Date.now();
+          // 如果下一次执行时间是过去的时间或者超过1小时，则重置为当前时间加上间隔
+          if (nextExecutionTime < now || nextExecutionTime > now + 3600000) {
+            console.warn('下一次执行时间无效，重置为当前时间加上间隔');
+            nextExecutionTime = now + (response.autoGroupInterval || 5000);
+          }
+        }
         console.log('下一次执行时间:', new Date(nextExecutionTime).toLocaleString());
 
         // 清除现有的倒计时

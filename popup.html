@@ -700,11 +700,38 @@
     .toggle-title {
       font-weight: 600;
       margin-bottom: 2px;
+      display: flex;
+      align-items: center;
     }
 
     .toggle-description {
       font-size: 12px;
       color: #666;
+    }
+
+    .interval-input {
+      margin-left: 10px;
+      display: flex;
+      align-items: center;
+      background-color: #f5f5f5;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 12px;
+    }
+
+    .interval-input input {
+      width: 60px;
+      border: 1px solid #ddd;
+      border-radius: 3px;
+      padding: 2px 4px;
+      font-size: 12px;
+      margin: 0 4px;
+      text-align: center;
+    }
+
+    .interval-input input:focus {
+      outline: none;
+      border-color: #0078d7;
     }
 
     /* 开关样式 */
@@ -813,6 +840,11 @@
         <div class="toggle-title">
           <span class="status-indicator status-active" id="monitoringIndicator"></span>
           <span id="monitoringStatus">持续监控已启用</span>
+          <div class="interval-input">
+            <span>间隔:</span>
+            <input type="number" id="monitoringInterval" min="1000" step="1000" value="5000">
+            <span>毫秒</span>
+          </div>
         </div>
         <div class="toggle-description">自动监控标签页状态并进行分组和排序</div>
       </div>

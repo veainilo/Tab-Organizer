@@ -1032,6 +1032,26 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
 
+  // 更新监控间隔
+  if (message.action === 'updateMonitoringInterval') {
+    console.log('处理 updateMonitoringInterval 消息');
+
+    if (message.interval !== undefined && message.interval >= 1000) {
+      settings.autoGroupInterval = message.interval;
+
+      // 更新监控状态
+      updateMonitoringStatus();
+
+      console.log('监控间隔已更新为:', settings.autoGroupInterval);
+    }
+
+    sendResponse({
+      success: true,
+      interval: settings.autoGroupInterval
+    });
+    return true;
+  }
+
   // 未知消息
   console.warn('收到未知消息:', message);
   sendResponse({ success: false, error: 'Unknown action' });

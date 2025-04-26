@@ -41,6 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const extensionActiveStatus = document.getElementById('extensionActiveStatus');
   const monitoringToggle = document.getElementById('monitoringToggle');
   const monitoringStatus = document.getElementById('monitoringStatus');
+  const monitoringInterval = document.getElementById('monitoringInterval');
 
   // 获取插件状态
   chrome.runtime.sendMessage({ action: 'getExtensionStatus' }, (response) => {
@@ -57,6 +58,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (response.settings && response.settings.monitoringEnabled !== undefined) {
         monitoringToggle.checked = response.settings.monitoringEnabled;
         updateMonitoringStatus(response.settings.monitoringEnabled);
+      }
+
+      // 设置监控间隔
+      if (response.settings && response.settings.autoGroupInterval !== undefined) {
+        monitoringInterval.value = response.settings.autoGroupInterval;
       }
     }
   });
@@ -120,6 +126,31 @@ document.addEventListener('DOMContentLoaded', () => {
       if (response && response.success) {
         // 更新状态文本
         updateMonitoringStatus(response.monitoringEnabled);
+      }
+    });
+  });
+
+  // 添加监控间隔输入框事件监听器
+  monitoringInterval.addEventListener('change', () => {
+    let interval = parseInt(monitoringInterval.value);
+
+    // 确保间隔至少为1000毫秒
+    if (isNaN(interval) || interval < 1000) {
+      interval = 1000;
+      monitoringInterval.value = interval;
+    }
+
+    console.log('监控间隔更改:', interval);
+
+    chrome.runtime.sendMessage({
+      action: 'updateMonitoringInterval',
+      interval: interval
+    }, (response) => {
+      console.log('updateMonitoringInterval 响应:', response);
+      if (response && response.success) {
+        showStatus('监控间隔已更新', 'success');
+      } else {
+        showStatus('更新监控间隔失败', 'error');
       }
     });
   });

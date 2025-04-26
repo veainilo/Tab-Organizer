@@ -346,8 +346,51 @@ async function sortTabGroups() {
       const info = groupInfo[group.id];
       const tabs = info.tabs;
 
-      // 对组内标签页进行排序（可以根据需要选择排序方法）
-      tabs.sort((a, b) => a.index - b.index); // 保持组内原有顺序
+      // 对组内标签页进行排序
+      // 根据当前排序方法计算每个标签的分数
+      const tabScores = {};
+      for (const tab of tabs) {
+        let score;
+
+        if (settings.sortingMethod === 'title') {
+          // 按标题排序
+          score = tab.title || '';
+        } else if (settings.sortingMethod === 'domain') {
+          // 按域名排序
+          score = extractDomain(tab.url || '');
+        } else if (settings.sortingMethod === 'smart') {
+          // 智能排序（结合多个因素）
+          const accessScore = Math.random(); // 模拟访问时间分数
+          const urlScore = tab.url ? Math.min(tab.url.length / 100, 1) : 0; // URL长度分数
+          const titleScore = tab.title ? Math.min(tab.title.length / 50, 1) : 0; // 标题长度分数
+
+          // 加权平均
+          score = (accessScore * 0.5) + (urlScore * 0.3) + (titleScore * 0.2);
+        } else {
+          // 默认按索引排序
+          score = tab.index;
+        }
+
+        tabScores[tab.id] = score;
+      }
+
+      // 根据分数对标签页进行排序
+      tabs.sort((a, b) => {
+        const scoreA = tabScores[a.id];
+        const scoreB = tabScores[b.id];
+
+        if (typeof scoreA === 'string' && typeof scoreB === 'string') {
+          // 字符串比较
+          return settings.sortAscending ?
+            scoreA.localeCompare(scoreB) :
+            scoreB.localeCompare(scoreA);
+        } else {
+          // 数值比较
+          return settings.sortAscending ?
+            scoreA - scoreB :
+            scoreB - scoreA;
+        }
+      });
 
       // 计算每个标签页的新位置
       for (const tab of tabs) {
@@ -453,6 +496,38 @@ async function getSortingMetrics() {
         createScore * createWeight
       );
 
+      // 计算组内标签的排序指标
+      const tabMetrics = {};
+      for (const tab of tabs) {
+        let score;
+
+        if (settings.sortingMethod === 'title') {
+          // 按标题排序
+          score = tab.title || '';
+        } else if (settings.sortingMethod === 'domain') {
+          // 按域名排序
+          score = extractDomain(tab.url || '');
+        } else if (settings.sortingMethod === 'smart') {
+          // 智能排序（结合多个因素）
+          const tabAccessScore = Math.random(); // 模拟访问时间分数
+          const urlScore = tab.url ? Math.min(tab.url.length / 100, 1) : 0; // URL长度分数
+          const titleScore = tab.title ? Math.min(tab.title.length / 50, 1) : 0; // 标题长度分数
+
+          // 加权平均
+          score = (tabAccessScore * 0.5) + (urlScore * 0.3) + (titleScore * 0.2);
+        } else {
+          // 默认按索引排序
+          score = tab.index;
+        }
+
+        tabMetrics[tab.id] = {
+          title: tab.title || 'Unnamed Tab',
+          url: tab.url || '',
+          index: tab.index,
+          score: score
+        };
+      }
+
       metrics[group.id] = {
         title: group.title || 'Unnamed Group',
         color: group.color,
@@ -468,7 +543,8 @@ async function getSortingMetrics() {
         sizeWeight: sizeWeight,
         createWeight: createWeight,
         finalScore: finalScore,
-        sortValue: finalScore.toFixed(2) // 使用最终分数作为排序值
+        sortValue: finalScore.toFixed(2), // 使用最终分数作为排序值
+        tabs: tabMetrics // 添加标签排序指标
       };
     }
 
@@ -477,7 +553,9 @@ async function getSortingMetrics() {
       success: true,
       metrics: metrics,
       sortingMethod: settings.groupSortingMethod,
-      sortAscending: settings.groupSortAscending
+      sortAscending: settings.groupSortAscending,
+      tabSortingMethod: settings.sortingMethod,
+      tabSortAscending: settings.sortAscending
     };
   } catch (error) {
     console.error('Error getting sorting metrics:', error);

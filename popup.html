@@ -257,6 +257,151 @@
       transform: none;
     }
 
+    /* 标签列表样式 */
+    .tab-list-container {
+      background-color: #f8f9fa;
+      border-left: 4px solid #e1e1e1;
+      margin-left: 15px;
+      margin-bottom: 10px;
+      border-radius: 0 0 8px 8px;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .tab-list-header {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 15px;
+      background-color: #eaeaea;
+      font-size: 12px;
+      font-weight: 600;
+      color: #666;
+    }
+
+    .tab-header-title {
+      flex: 1;
+    }
+
+    .tab-header-info {
+      display: flex;
+      gap: 15px;
+    }
+
+    .tab-header-info span {
+      min-width: 40px;
+      text-align: center;
+    }
+
+    .tab-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 15px;
+      border-bottom: 1px solid #eaeaea;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .tab-item:last-child {
+      border-bottom: none;
+    }
+
+    .tab-item:hover {
+      background-color: #f0f0f0;
+    }
+
+    .tab-title {
+      display: flex;
+      align-items: center;
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .tab-order-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      font-size: 10px;
+      font-weight: bold;
+      margin-right: 8px;
+      background-color: #e1e1e1;
+      color: #555;
+    }
+
+    .tab-icon, .tab-icon-placeholder {
+      width: 16px;
+      height: 16px;
+      margin-right: 8px;
+      flex-shrink: 0;
+    }
+
+    .tab-icon-placeholder {
+      font-size: 14px;
+      color: #999;
+      text-align: center;
+    }
+
+    .tab-title-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 13px;
+    }
+
+    .tab-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .tab-score-indicator {
+      font-size: 11px;
+      font-weight: 600;
+      color: #0078d7;
+      min-width: 40px;
+      text-align: center;
+      background-color: #f0f7ff;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .tab-actions {
+      display: flex;
+      gap: 5px;
+    }
+
+    .tab-action-button {
+      background: none;
+      border: none;
+      color: #666;
+      cursor: pointer;
+      padding: 3px;
+      border-radius: 3px;
+      transition: all 0.2s;
+      width: auto;
+      box-shadow: none;
+    }
+
+    .tab-action-button:hover {
+      background-color: #e9e9e9;
+      color: #333;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .expand-button {
+      transition: transform 0.2s;
+    }
+
+    .expand-button[data-expanded="true"] {
+      transform: rotate(180deg);
+    }
+
     .group-header {
       display: flex;
       justify-content: space-between;

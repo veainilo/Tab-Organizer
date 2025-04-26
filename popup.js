@@ -861,16 +861,226 @@ document.addEventListener('DOMContentLoaded', () => {
         // 设置组项的边框颜色
         groupItem.style.borderLeft = `4px solid ${getGroupColorBackground(group.color)}`;
 
+        // 创建展开/折叠按钮
+        const expandButton = document.createElement('button');
+        expandButton.className = 'group-action-button expand-button';
+        expandButton.title = '展开/折叠标签列表';
+        expandButton.innerHTML = '&#9660;'; // 向下箭头
+        expandButton.dataset.expanded = 'false';
+        actionsContainer.appendChild(expandButton);
+
+        // 创建标签列表容器（初始隐藏）
+        const tabListContainer = document.createElement('div');
+        tabListContainer.className = 'tab-list-container';
+        tabListContainer.style.display = 'none';
+
+        // 获取组内标签页
+        const groupTabs = tabs.filter(tab => tab.groupId === group.id);
+
+        // 获取标签排序指标
+        let tabSortingMetrics = {};
+
+        try {
+          // 尝试从后台获取标签排序指标
+          if (sortingMetrics[group.id] && sortingMetrics[group.id].tabs) {
+            tabSortingMetrics = sortingMetrics[group.id].tabs;
+          } else {
+            // 如果没有获取到后台指标，在前端计算
+            console.log('未获取到后台标签排序指标，在前端计算');
+
+            // 使用与标签组相同的排序方法计算标签的排序分数
+            for (const tab of groupTabs) {
+              let score;
+
+              if (currentSortMethod === 'title') {
+                // 按标题排序
+                score = tab.title || '';
+              } else if (currentSortMethod === 'size') {
+                // 按URL长度排序（作为替代）
+                score = tab.url ? tab.url.length : 0;
+              } else if (currentSortMethod === 'smart') {
+                // 智能排序（结合多个因素）
+                const accessScore = Math.random(); // 模拟访问时间分数
+                const urlScore = tab.url ? Math.min(tab.url.length / 100, 1) : 0; // URL长度分数
+                const titleScore = tab.title ? Math.min(tab.title.length / 50, 1) : 0; // 标题长度分数
+
+                // 加权平均
+                score = (accessScore * 0.5) + (urlScore * 0.3) + (titleScore * 0.2);
+              } else {
+                // 默认按索引排序
+                score = tab.index;
+              }
+
+              tabSortingMetrics[tab.id] = {
+                score: score,
+                title: tab.title || 'Unnamed Tab',
+                url: tab.url || '',
+                index: tab.index
+              };
+            }
+          }
+        } catch (error) {
+          console.error('获取标签排序指标失败:', error);
+
+          // 出错时使用简单的索引排序
+          for (const tab of groupTabs) {
+            tabSortingMetrics[tab.id] = {
+              score: tab.index,
+              title: tab.title || 'Unnamed Tab',
+              url: tab.url || '',
+              index: tab.index
+            };
+          }
+        }
+
+        // 根据分数对标签页进行排序
+        const sortedTabs = [...groupTabs].sort((a, b) => {
+          const scoreA = tabSortingMetrics[a.id]?.score;
+          const scoreB = tabSortingMetrics[b.id]?.score;
+
+          if (typeof scoreA === 'string' && typeof scoreB === 'string') {
+            // 字符串比较
+            return sortAscending ?
+              scoreA.localeCompare(scoreB) :
+              scoreB.localeCompare(scoreA);
+          } else {
+            // 数值比较
+            return sortAscending ?
+              scoreA - scoreB :
+              scoreB - scoreA;
+          }
+        });
+
+        // 添加标签列表标题
+        const tabListHeader = document.createElement('div');
+        tabListHeader.className = 'tab-list-header';
+        tabListHeader.innerHTML = `
+          <div class="tab-header-title">标签名称</div>
+          <div class="tab-header-info">
+            <span>评分</span>
+            <span>操作</span>
+          </div>
+        `;
+        tabListContainer.appendChild(tabListHeader);
+
+        // 添加标签项
+        sortedTabs.forEach((tab, index) => {
+          const tabItem = document.createElement('div');
+          tabItem.className = 'tab-item';
+
+          // 创建标签图标和标题
+          const tabTitle = document.createElement('div');
+          tabTitle.className = 'tab-title';
+
+          // 添加序号
+          const orderBadge = document.createElement('span');
+          orderBadge.className = 'tab-order-badge';
+          orderBadge.textContent = (index + 1).toString();
+          tabTitle.appendChild(orderBadge);
+
+          // 添加图标（如果有）
+          if (tab.favIconUrl) {
+            const tabIcon = document.createElement('img');
+            tabIcon.className = 'tab-icon';
+            tabIcon.src = tab.favIconUrl;
+            tabIcon.onerror = () => {
+              tabIcon.style.display = 'none';
+            };
+            tabTitle.appendChild(tabIcon);
+          } else {
+            const tabIcon = document.createElement('span');
+            tabIcon.className = 'tab-icon-placeholder';
+            tabIcon.innerHTML = '&#128196;'; // 文档图标
+            tabTitle.appendChild(tabIcon);
+          }
+
+          // 添加标题文本
+          const titleText = document.createElement('span');
+          titleText.className = 'tab-title-text';
+          titleText.textContent = tab.title || 'Unnamed Tab';
+          titleText.title = tab.title || 'Unnamed Tab';
+          tabTitle.appendChild(titleText);
+
+          // 创建右侧区域
+          const tabInfo = document.createElement('div');
+          tabInfo.className = 'tab-info';
+
+          // 添加排序评分
+          const scoreIndicator = document.createElement('span');
+          scoreIndicator.className = 'tab-score-indicator';
+
+          // 获取排序评分
+          let scoreText = `#${index + 1}`;
+          let scoreTitle = '当前排序位置';
+
+          if (tabSortingMetrics[tab.id]) {
+            const metrics = tabSortingMetrics[tab.id];
+
+            if (currentSortMethod === 'title') {
+              scoreText = metrics.title.substring(0, 10) + (metrics.title.length > 10 ? '...' : '');
+              scoreTitle = '标题';
+            } else if (currentSortMethod === 'size') {
+              scoreText = metrics.url.length.toString();
+              scoreTitle = 'URL长度';
+            } else if (currentSortMethod === 'smart') {
+              scoreText = metrics.score.toFixed(2);
+              scoreTitle = '智能排序评分';
+            } else {
+              scoreText = metrics.index.toString();
+              scoreTitle = '标签索引';
+            }
+          }
+
+          scoreIndicator.textContent = scoreText;
+          scoreIndicator.title = `${scoreTitle}: ${scoreText}`;
+          tabInfo.appendChild(scoreIndicator);
+
+          // 添加操作按钮
+          const tabActions = document.createElement('div');
+          tabActions.className = 'tab-actions';
+
+          // 添加激活按钮
+          const activateButton = document.createElement('button');
+          activateButton.className = 'tab-action-button';
+          activateButton.title = '切换到此标签';
+          activateButton.innerHTML = '&#128065;'; // 眼睛图标
+          activateButton.addEventListener('click', (e) => {
+            e.stopPropagation(); // 阻止事件冒泡
+            chrome.tabs.update(tab.id, { active: true });
+          });
+          tabActions.appendChild(activateButton);
+
+          tabInfo.appendChild(tabActions);
+
+          // 添加到标签项
+          tabItem.appendChild(tabTitle);
+          tabItem.appendChild(tabInfo);
+
+          // 添加点击事件
+          tabItem.addEventListener('click', () => {
+            chrome.tabs.update(tab.id, { active: true });
+          });
+
+          tabListContainer.appendChild(tabItem);
+        });
+
+        // 添加展开/折叠按钮的点击事件
+        expandButton.addEventListener('click', (e) => {
+          e.stopPropagation(); // 阻止事件冒泡
+
+          const isExpanded = expandButton.dataset.expanded === 'true';
+          expandButton.dataset.expanded = isExpanded ? 'false' : 'true';
+          expandButton.innerHTML = isExpanded ? '&#9660;' : '&#9650;'; // 向下或向上箭头
+          tabListContainer.style.display = isExpanded ? 'none' : 'block';
+        });
+
+        // 添加标签列表容器到组项之后
+        groupItem.insertAdjacentElement('afterend', tabListContainer);
+
         // 添加点击事件
         groupItem.addEventListener('click', () => {
-          // 可以添加点击组时的操作，例如聚焦到该组
-          console.log('点击了标签组:', group.title);
-
-          // 聚焦到该组的第一个标签页
-          const groupTabs = tabs.filter(tab => tab.groupId === group.id);
-          if (groupTabs.length > 0) {
-            chrome.tabs.update(groupTabs[0].id, { active: true });
-          }
+          // 切换展开/折叠状态
+          expandButton.click();
         });
 
         groupListElement.appendChild(groupItem);

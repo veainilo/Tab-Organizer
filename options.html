@@ -204,6 +204,36 @@
   </div>
 
   <div class="section">
+    <div class="section-title" data-i18n="tabSorting">Tab Sorting</div>
+    <p data-i18n="tabSortingDesc">Choose how tabs should be sorted within groups:</p>
+
+    <div class="option">
+      <label>
+        <input type="checkbox" id="enableTabSorting">
+        <span data-i18n="enableTabSorting">Enable automatic tab sorting within groups</span>
+      </label>
+    </div>
+
+    <div class="option">
+      <select id="sortingMethod">
+        <option value="domain" data-i18n="sortByDomain">Sort by domain</option>
+        <option value="title" data-i18n="sortByTitle">Sort by title</option>
+        <option value="accessTime" data-i18n="sortByAccessTime">Sort by recent access</option>
+        <option value="createTime" data-i18n="sortByCreateTime">Sort by creation time</option>
+        <option value="frequency" data-i18n="sortByFrequency">Sort by usage frequency</option>
+        <option value="smart" data-i18n="sortBySmart">Smart sorting</option>
+      </select>
+    </div>
+
+    <div class="option">
+      <label>
+        <input type="checkbox" id="sortAscending">
+        <span data-i18n="sortAscending">Sort in ascending order (A-Z, oldest first)</span>
+      </label>
+    </div>
+  </div>
+
+  <div class="section">
     <div class="section-title" data-i18n="excludedDomains">Excluded Domains</div>
     <p data-i18n="excludedDomainsDesc">Tabs from these domains will not be automatically grouped:</p>
 

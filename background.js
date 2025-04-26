@@ -210,6 +210,13 @@ function longestCommonSubsequence(str1, str2) {
 // 主域名到颜色的映射
 const mainDomainColorMap = {};
 
+// 标签页访问时间记录
+const tabAccessTimes = {};
+// 标签页创建时间记录
+const tabCreateTimes = {};
+// 标签页使用频率记录
+const tabUsageCount = {};
+
 // 为域名生成一致的颜色
 function getColorForDomain(domain) {
   // 如果已经有缓存的颜色，直接返回
@@ -425,20 +432,8 @@ async function groupTabsByDomain() {
         }
       }
 
-      if (existingGroupId) {
-        // Add tabs to existing group
-        await chrome.tabs.group({ tabIds, groupId: existingGroupId });
-      } else {
-        // Create new group
-        const groupId = await chrome.tabs.group({ tabIds });
-
-        // Set group title and color
-        const color = getColorForDomain(domain);
-        await chrome.tabGroups.update(groupId, {
-          title: domain,
-          color: color
-        });
-      }
+      // 创建或更新标签组
+      await createOrUpdateTabGroup(tabIds, domain, existingGroupId);
     }
   } catch (error) {
     console.error('Error grouping tabs by domain:', error);
@@ -475,30 +470,19 @@ chrome.tabs.onCreated.addListener(async (tab) => {
         }
       }
 
-      if (existingGroupId) {
-        // Add tab to existing group
-        await chrome.tabs.group({ tabIds: [tab.id], groupId: existingGroupId });
-      } else {
-        // Check if there are other tabs with the same domain
-        const sameDomainTabs = tabs.filter(t =>
-          t.id !== tab.id &&
-          t.url &&
-          getDomainForGrouping(t.url) === domain
-        );
+      // Check if there are other tabs with the same domain
+      const sameDomainTabs = tabs.filter(t =>
+        t.id !== tab.id &&
+        t.url &&
+        getDomainForGrouping(t.url) === domain
+      );
 
-        // 即使没有其他相同域名的标签页，也创建组
-        const tabIds = sameDomainTabs.length > 0 ?
-          [tab.id, ...sameDomainTabs.map(t => t.id)] : [tab.id];
+      // 即使没有其他相同域名的标签页，也创建组
+      const tabIds = sameDomainTabs.length > 0 ?
+        [tab.id, ...sameDomainTabs.map(t => t.id)] : [tab.id];
 
-        const groupId = await chrome.tabs.group({ tabIds });
-
-        // Set group title and color
-        const color = getColorForDomain(domain);
-        await chrome.tabGroups.update(groupId, {
-          title: domain,
-          color: color
-        });
-      }
+      // 创建或更新标签组
+      await createOrUpdateTabGroup(tabIds, domain, existingGroupId);
     } catch (error) {
       console.error('Error handling new tab:', error);
     }
@@ -545,34 +529,189 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
         await chrome.tabs.ungroup(tabId);
       }
 
-      if (existingGroupId) {
-        // Add tab to existing group
-        await chrome.tabs.group({ tabIds: [tabId], groupId: existingGroupId });
-      } else {
-        // Check if there are other tabs with the same domain
-        const sameDomainTabs = tabs.filter(t =>
-          t.id !== tabId &&
-          t.url &&
-          getDomainForGrouping(t.url) === domain
-        );
+      // Check if there are other tabs with the same domain
+      const sameDomainTabs = tabs.filter(t =>
+        t.id !== tabId &&
+        t.url &&
+        getDomainForGrouping(t.url) === domain
+      );
 
-        // 即使没有其他相同域名的标签页，也创建组
-        const tabIds = sameDomainTabs.length > 0 ?
-          [tabId, ...sameDomainTabs.map(t => t.id)] : [tabId];
+      // 即使没有其他相同域名的标签页，也创建组
+      const tabIds = sameDomainTabs.length > 0 ?
+        [tabId, ...sameDomainTabs.map(t => t.id)] : [tabId];
 
-        const groupId = await chrome.tabs.group({ tabIds });
-
-        // Set group title and color
-        const color = getColorForDomain(domain);
-        await chrome.tabGroups.update(groupId, {
-          title: domain,
-          color: color
-        });
-      }
+      // 创建或更新标签组
+      await createOrUpdateTabGroup(tabIds, domain, existingGroupId);
     } catch (error) {
       console.error('Error handling tab update:', error);
     }
   }, 500); // Wait 0.5 seconds for the tab to fully update
+});
+
+// 对标签组内的标签进行排序
+async function sortTabsInGroup(groupId) {
+  try {
+    // 获取组内所有标签
+    const tabs = await chrome.tabs.query({ groupId });
+    if (tabs.length <= 1) return; // 只有一个标签不需要排序
+
+    // 根据设置的排序方法对标签进行排序
+    let sortedTabs = [...tabs];
+
+    switch (settings.sortingMethod) {
+      case 'domain':
+        // 按域名排序
+        sortedTabs.sort((a, b) => {
+          const domainA = extractDomain(a.url || '');
+          const domainB = extractDomain(b.url || '');
+          return settings.sortAscending ?
+            domainA.localeCompare(domainB) :
+            domainB.localeCompare(domainA);
+        });
+        break;
+
+      case 'title':
+        // 按标题排序
+        sortedTabs.sort((a, b) => {
+          return settings.sortAscending ?
+            a.title.localeCompare(b.title) :
+            b.title.localeCompare(a.title);
+        });
+        break;
+
+      case 'accessTime':
+        // 按最近访问时间排序
+        sortedTabs.sort((a, b) => {
+          const timeA = tabAccessTimes[a.id] || 0;
+          const timeB = tabAccessTimes[b.id] || 0;
+          return settings.sortAscending ?
+            timeA - timeB :
+            timeB - timeA;
+        });
+        break;
+
+      case 'createTime':
+        // 按创建时间排序
+        sortedTabs.sort((a, b) => {
+          const timeA = tabCreateTimes[a.id] || 0;
+          const timeB = tabCreateTimes[b.id] || 0;
+          return settings.sortAscending ?
+            timeA - timeB :
+            timeB - timeA;
+        });
+        break;
+
+      case 'frequency':
+        // 按使用频率排序
+        sortedTabs.sort((a, b) => {
+          const countA = tabUsageCount[a.id] || 0;
+          const countB = tabUsageCount[b.id] || 0;
+          return settings.sortAscending ?
+            countA - countB :
+            countB - countA;
+        });
+        break;
+
+      case 'smart':
+        // 智能排序 (结合多种因素)
+        sortedTabs.sort((a, b) => {
+          // 计算综合分数 (访问时间、使用频率、创建时间的加权平均)
+          const scoreA = calculateSmartScore(a.id);
+          const scoreB = calculateSmartScore(b.id);
+          return settings.sortAscending ?
+            scoreA - scoreB :
+            scoreB - scoreA;
+        });
+        break;
+    }
+
+    // 移动标签到新的位置
+    for (let i = 0; i < sortedTabs.length; i++) {
+      await chrome.tabs.move(sortedTabs[i].id, { index: i });
+    }
+  } catch (error) {
+    console.error('Error sorting tabs in group:', error);
+  }
+}
+
+// 计算标签的智能排序分数
+function calculateSmartScore(tabId) {
+  const now = Date.now();
+  const accessTime = tabAccessTimes[tabId] || 0;
+  const createTime = tabCreateTimes[tabId] || 0;
+  const usageCount = tabUsageCount[tabId] || 0;
+
+  // 访问时间权重 (最近访问的分数高)
+  const accessScore = accessTime ? (now - accessTime) / 3600000 : 24; // 小时为单位，最大24
+
+  // 使用频率权重
+  const usageScore = Math.min(usageCount, 100); // 最大100
+
+  // 创建时间权重 (新创建的分数高)
+  const createScore = createTime ? (now - createTime) / 86400000 : 30; // 天为单位，最大30
+
+  // 综合分数 (访问时间占50%，使用频率占30%，创建时间占20%)
+  return (accessScore * 0.5) + (usageScore * 0.3) + (createScore * 0.2);
+}
+
+// 记录标签访问时间
+chrome.tabs.onActivated.addListener(activeInfo => {
+  tabAccessTimes[activeInfo.tabId] = Date.now();
+  tabUsageCount[activeInfo.tabId] = (tabUsageCount[activeInfo.tabId] || 0) + 1;
+});
+
+// 记录标签创建时间
+chrome.tabs.onCreated.addListener(tab => {
+  tabCreateTimes[tab.id] = Date.now();
+  tabAccessTimes[tab.id] = Date.now();
+  tabUsageCount[tab.id] = 1;
+});
+
+// 清理已关闭标签的记录
+chrome.tabs.onRemoved.addListener(tabId => {
+  delete tabAccessTimes[tabId];
+  delete tabCreateTimes[tabId];
+  delete tabUsageCount[tabId];
+});
+
+// 创建或更新标签组，并应用排序
+async function createOrUpdateTabGroup(tabIds, domain, existingGroupId = null) {
+  try {
+    let groupId;
+
+    if (existingGroupId) {
+      // 添加到现有组
+      await chrome.tabs.group({ tabIds, groupId: existingGroupId });
+      groupId = existingGroupId;
+    } else {
+      // 创建新组
+      groupId = await chrome.tabs.group({ tabIds });
+
+      // 设置组标题和颜色
+      const color = getColorForDomain(domain);
+      await chrome.tabGroups.update(groupId, {
+        title: domain,
+        color: color
+      });
+    }
+
+    // 如果启用了标签排序，对组内标签进行排序
+    if (settings.enableTabSorting) {
+      await sortTabsInGroup(groupId);
+    }
+
+    return groupId;
+  } catch (error) {
+    console.error('Error creating or updating tab group:', error);
+    return null;
+  }
+}
+
+// 监听标签组更新事件，进行排序
+chrome.tabGroups.onUpdated.addListener(async (group) => {
+  if (settings.enableTabSorting) {
+    await sortTabsInGroup(group.id);
+  }
 });
 
 // Listen for messages from popup or options page
@@ -600,6 +739,16 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         console.error('Error in ungroupAll:', error);
         sendResponse({ success: false, error: error.message });
       }
+    });
+    return true; // Indicates async response
+  }
+
+  if (message.action === 'sortTabGroup') {
+    sortTabsInGroup(message.groupId).then(() => {
+      sendResponse({ success: true });
+    }).catch(error => {
+      console.error('Error in sortTabGroup:', error);
+      sendResponse({ success: false, error: error.message });
     });
     return true; // Indicates async response
   }

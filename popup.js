@@ -30,6 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Get UI elements
   const groupByDomainButton = document.getElementById('groupByDomain');
   const ungroupAllButton = document.getElementById('ungroupAll');
+  const sortTabsButton = document.getElementById('sortTabs');
   const statusElement = document.getElementById('status');
   const groupListElement = document.getElementById('groupList');
   const noGroupsElement = document.getElementById('noGroups');
@@ -60,6 +61,34 @@ document.addEventListener('DOMContentLoaded', () => {
         loadTabGroups();
       } else {
         showStatus(getMessage('errorUngroupingTabs', [response.error || 'Unknown error']), 'error');
+      }
+    });
+  });
+
+  sortTabsButton.addEventListener('click', () => {
+    showStatus(getMessage('sortingTabs'), 'info');
+
+    // 获取所有标签组
+    chrome.tabGroups.query({ windowId: WINDOW_ID_CURRENT }, async (groups) => {
+      try {
+        if (groups.length === 0) {
+          showStatus(getMessage('noGroupsToSort'), 'info');
+          return;
+        }
+
+        // 对每个组进行排序
+        for (const group of groups) {
+          await chrome.runtime.sendMessage({
+            action: 'sortTabGroup',
+            groupId: group.id
+          });
+        }
+
+        showStatus(getMessage('tabsSorted'), 'success');
+        loadTabGroups();
+      } catch (error) {
+        console.error('Error sorting tabs:', error);
+        showStatus(getMessage('errorSortingTabs', [error.message || 'Unknown error']), 'error');
       }
     });
   });

@@ -10,6 +10,9 @@ let settings = {
   groupByRootDomain: true,  // 按根域名分组
   ignoreTLD: true,          // 忽略顶级域名（如.com, .org等）
   useDynamicColors: true,   // 动态分配颜色
+  enableTabSorting: true,   // 启用标签排序
+  sortingMethod: 'domain',  // 排序方法
+  sortAscending: true,      // 升序排序
   excludeDomains: [],
   colorScheme: {
     'default': 'blue'
@@ -21,7 +24,10 @@ let autoGroupByDomainCheckbox;
 let autoGroupOnCreationCheckbox;
 let groupByRootDomainCheckbox;
 let ignoreTLDCheckbox;
-let useDynamicColorsCheckbox;  // 新增
+let useDynamicColorsCheckbox;
+let enableTabSortingCheckbox;
+let sortingMethodSelect;
+let sortAscendingCheckbox;
 let domainListElement;
 let noDomainsElement;
 let newDomainInput;
@@ -56,7 +62,10 @@ document.addEventListener('DOMContentLoaded', () => {
   autoGroupOnCreationCheckbox = document.getElementById('autoGroupOnCreation');
   groupByRootDomainCheckbox = document.getElementById('groupByRootDomain');
   ignoreTLDCheckbox = document.getElementById('ignoreTLD');
-  useDynamicColorsCheckbox = document.getElementById('useDynamicColors');  // 新增
+  useDynamicColorsCheckbox = document.getElementById('useDynamicColors');
+  enableTabSortingCheckbox = document.getElementById('enableTabSorting');
+  sortingMethodSelect = document.getElementById('sortingMethod');
+  sortAscendingCheckbox = document.getElementById('sortAscending');
   domainListElement = document.getElementById('domainList');
   noDomainsElement = document.getElementById('noDomains');
   newDomainInput = document.getElementById('newDomain');
@@ -103,6 +112,11 @@ function updateUI() {
   groupByRootDomainCheckbox.checked = settings.groupByRootDomain;
   ignoreTLDCheckbox.checked = settings.ignoreTLD;
   useDynamicColorsCheckbox.checked = settings.useDynamicColors;
+
+  // Update sorting options
+  enableTabSortingCheckbox.checked = settings.enableTabSorting;
+  sortingMethodSelect.value = settings.sortingMethod;
+  sortAscendingCheckbox.checked = settings.sortAscending;
 
   // Update excluded domains list
   updateDomainList();
@@ -258,6 +272,11 @@ function saveSettings() {
   settings.groupByRootDomain = groupByRootDomainCheckbox.checked;
   settings.ignoreTLD = ignoreTLDCheckbox.checked;
   settings.useDynamicColors = useDynamicColorsCheckbox.checked;
+
+  // Get sorting options
+  settings.enableTabSorting = enableTabSortingCheckbox.checked;
+  settings.sortingMethod = sortingMethodSelect.value;
+  settings.sortAscending = sortAscendingCheckbox.checked;
 
   // Get default color
   settings.colorScheme['default'] = defaultColorSelect.value;

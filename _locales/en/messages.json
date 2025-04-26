@@ -1,204 +1,63 @@
 {
-  "extName": {
-    "message": "Edge Tab Organizer",
-    "description": "Extension name"
-  },
-  "extDescription": {
-    "message": "Automatically organize tabs using Edge's built-in tab management features",
-    "description": "Extension description"
-  },
-  "groupByDomain": {
-    "message": "Group Tabs by Domain",
-    "description": "Button to group tabs by domain"
-  },
-  "ungroupAll": {
-    "message": "Ungroup All Tabs",
-    "description": "Button to ungroup all tabs"
-  },
-  "settings": {
-    "message": "Settings",
-    "description": "Settings link"
-  },
-  "noGroups": {
-    "message": "No tab groups found",
-    "description": "Message when no tab groups are found"
-  },
-  "settingsTitle": {
-    "message": "Edge Tab Organizer - Settings",
-    "description": "Settings page title"
-  },
-  "automaticGrouping": {
-    "message": "Automatic Grouping",
-    "description": "Section title for automatic grouping settings"
-  },
-  "autoGroupByDomain": {
-    "message": "Automatically group tabs by domain",
-    "description": "Option to automatically group tabs by domain"
-  },
-  "autoGroupOnCreation": {
-    "message": "Automatically group new tabs when created",
-    "description": "Option to automatically group new tabs when created"
-  },
-  "groupByRootDomain": {
-    "message": "Group by root domain (e.g., group docs.example.com and forum.example.com together)",
-    "description": "Option to group by root domain"
-  },
-  "ignoreTLD": {
-    "message": "Ignore top-level domain (e.g., group example.com and example.org together)",
-    "description": "Option to ignore top-level domain"
-  },
-  "useDynamicColors": {
-    "message": "Use dynamic colors (automatically assign different colors to different domains)",
-    "description": "Option to use dynamic colors"
-  },
-  "excludedDomains": {
-    "message": "Excluded Domains",
-    "description": "Section title for excluded domains"
-  },
-  "excludedDomainsDesc": {
-    "message": "Tabs from these domains will not be automatically grouped:",
-    "description": "Description for excluded domains"
-  },
-  "noDomains": {
-    "message": "No excluded domains",
-    "description": "Message when no excluded domains are found"
-  },
-  "enterDomain": {
-    "message": "Enter domain (e.g., example.com)",
-    "description": "Placeholder for domain input"
-  },
-  "addDomain": {
-    "message": "Add Domain",
-    "description": "Button to add domain"
-  },
-  "colorScheme": {
-    "message": "Color Scheme",
-    "description": "Section title for color scheme"
-  },
-  "colorSchemeDesc": {
-    "message": "Customize colors for specific domains:",
-    "description": "Description for color scheme"
-  },
-  "addDomainColor": {
-    "message": "Add Domain Color",
-    "description": "Button to add domain color"
-  },
-  "saveSettings": {
-    "message": "Save Settings",
-    "description": "Button to save settings"
-  },
-  "domainAdded": {
-    "message": "Domain added",
-    "description": "Message when domain is added"
-  },
-  "domainRemoved": {
-    "message": "Domain removed",
-    "description": "Message when domain is removed"
-  },
-  "settingsSaved": {
-    "message": "Settings saved successfully!",
-    "description": "Message when settings are saved"
-  },
-  "errorSavingSettings": {
-    "message": "Error saving settings: $ERROR$",
-    "description": "Message when there is an error saving settings",
-    "placeholders": {
-      "error": {
-        "content": "$1",
-        "example": "Unknown error"
-      }
-    }
-  },
-  "groupingTabs": {
-    "message": "Grouping tabs by domain...",
-    "description": "Message when grouping tabs"
-  },
-  "tabsGrouped": {
-    "message": "Tabs grouped successfully!",
-    "description": "Message when tabs are grouped"
-  },
-  "errorGroupingTabs": {
-    "message": "Error grouping tabs: $ERROR$",
-    "description": "Message when there is an error grouping tabs",
-    "placeholders": {
-      "error": {
-        "content": "$1",
-        "example": "Unknown error"
-      }
-    }
-  },
-  "ungroupingTabs": {
-    "message": "Ungrouping all tabs...",
-    "description": "Message when ungrouping tabs"
-  },
-  "tabsUngrouped": {
-    "message": "Tabs ungrouped successfully!",
-    "description": "Message when tabs are ungrouped"
-  },
-  "errorUngroupingTabs": {
-    "message": "Error ungrouping tabs: $ERROR$",
-    "description": "Message when there is an error ungrouping tabs",
-    "placeholders": {
-      "error": {
-        "content": "$1",
-        "example": "Unknown error"
-      }
-    }
-  },
-  "errorLoadingGroups": {
-    "message": "Error loading tab groups",
-    "description": "Message when there is an error loading tab groups"
-  },
-  "unnamedGroup": {
-    "message": "(Unnamed group)",
-    "description": "Text for unnamed group"
-  },
-  "grey": {
-    "message": "Grey",
-    "description": "Color name: Grey"
-  },
-  "blue": {
-    "message": "Blue",
-    "description": "Color name: Blue"
-  },
-  "red": {
-    "message": "Red",
-    "description": "Color name: Red"
-  },
-  "yellow": {
-    "message": "Yellow",
-    "description": "Color name: Yellow"
-  },
-  "green": {
-    "message": "Green",
-    "description": "Color name: Green"
-  },
-  "pink": {
-    "message": "Pink",
-    "description": "Color name: Pink"
-  },
-  "purple": {
-    "message": "Purple",
-    "description": "Color name: Purple"
-  },
-  "cyan": {
-    "message": "Cyan",
-    "description": "Color name: Cyan"
-  },
-  "orange": {
-    "message": "Orange",
-    "description": "Color name: Orange"
-  },
-  "remove": {
-    "message": "Remove",
-    "description": "Button to remove item"
-  },
-  "pleaseEnterDomain": {
-    "message": "Please enter a domain",
-    "description": "Message when domain is empty"
-  },
-  "domainAlreadyInList": {
-    "message": "Domain is already in the list",
-    "description": "Message when domain is already in the list"
-  }
+  "extName": {"message": "Edge Tab Organizer", "description": "Extension name"},
+  "extDescription": {"message": "Automatically organize your tabs into groups based on domain", "description": "Extension description"},
+  "groupByDomain": {"message": "Group Tabs by Domain", "description": "Button to group tabs by domain"},
+  "ungroupAll": {"message": "Ungroup All Tabs", "description": "Button to ungroup all tabs"},
+  "sortTabs": {"message": "Sort Tabs in Groups", "description": "Button to sort tabs in groups"},
+  "settings": {"message": "Settings", "description": "Settings link"},
+  "noGroups": {"message": "No tab groups found", "description": "Message when no tab groups are found"},
+  "unnamedGroup": {"message": "Unnamed Group", "description": "Label for unnamed tab group"},
+  "settingsTitle": {"message": "Edge Tab Organizer - Settings", "description": "Settings page title"},
+  "automaticGrouping": {"message": "Automatic Grouping", "description": "Automatic grouping section title"},
+  "autoGroupByDomain": {"message": "Automatically group tabs by domain", "description": "Option to automatically group tabs by domain"},
+  "autoGroupOnCreation": {"message": "Automatically group new tabs when created", "description": "Option to automatically group new tabs when created"},
+  "groupByRootDomain": {"message": "Group by root domain (e.g., group docs.example.com and forum.example.com together)", "description": "Option to group by root domain"},
+  "ignoreTLD": {"message": "Ignore top-level domain (e.g., group example.com and example.org together)", "description": "Option to ignore top-level domain"},
+  "useDynamicColors": {"message": "Use dynamic colors (automatically assign different colors to different domains)", "description": "Option to use dynamic colors"},
+  "tabSorting": {"message": "Tab Sorting", "description": "Tab sorting section title"},
+  "tabSortingDesc": {"message": "Choose how tabs should be sorted within groups:", "description": "Description for tab sorting section"},
+  "enableTabSorting": {"message": "Enable automatic tab sorting within groups", "description": "Option to enable automatic tab sorting"},
+  "sortByDomain": {"message": "Sort by domain", "description": "Option to sort tabs by domain"},
+  "sortByTitle": {"message": "Sort by title", "description": "Option to sort tabs by title"},
+  "sortByAccessTime": {"message": "Sort by recent access", "description": "Option to sort tabs by access time"},
+  "sortByCreateTime": {"message": "Sort by creation time", "description": "Option to sort tabs by creation time"},
+  "sortByFrequency": {"message": "Sort by usage frequency", "description": "Option to sort tabs by usage frequency"},
+  "sortBySmart": {"message": "Smart sorting", "description": "Option to use smart sorting"},
+  "sortAscending": {"message": "Sort in ascending order (A-Z, oldest first)", "description": "Option to sort in ascending order"},
+  "excludedDomains": {"message": "Excluded Domains", "description": "Excluded domains section title"},
+  "excludedDomainsDesc": {"message": "Tabs from these domains will not be automatically grouped:", "description": "Description for excluded domains section"},
+  "noDomains": {"message": "No excluded domains", "description": "Message when no domains are excluded"},
+  "enterDomain": {"message": "Enter domain (e.g., example.com)", "description": "Placeholder for domain input"},
+  "addDomain": {"message": "Add Domain", "description": "Button to add domain"},
+  "colorScheme": {"message": "Color Scheme", "description": "Color scheme section title"},
+  "colorSchemeDesc": {"message": "Customize colors for specific domains:", "description": "Description for color scheme section"},
+  "addDomainColor": {"message": "Add Domain Color", "description": "Button to add domain color"},
+  "saveSettings": {"message": "Save Settings", "description": "Button to save settings"},
+  "grey": {"message": "Grey", "description": "Grey color"},
+  "blue": {"message": "Blue", "description": "Blue color"},
+  "red": {"message": "Red", "description": "Red color"},
+  "yellow": {"message": "Yellow", "description": "Yellow color"},
+  "green": {"message": "Green", "description": "Green color"},
+  "pink": {"message": "Pink", "description": "Pink color"},
+  "purple": {"message": "Purple", "description": "Purple color"},
+  "cyan": {"message": "Cyan", "description": "Cyan color"},
+  "orange": {"message": "Orange", "description": "Orange color"},
+  "remove": {"message": "Remove", "description": "Button to remove item"},
+  "pleaseEnterDomain": {"message": "Please enter a domain", "description": "Error message when domain is empty"},
+  "domainAlreadyInList": {"message": "Domain is already in the list", "description": "Error message when domain is already in the list"},
+  "domainAdded": {"message": "Domain added", "description": "Success message when domain is added"},
+  "domainRemoved": {"message": "Domain removed", "description": "Success message when domain is removed"},
+  "errorSavingSettings": {"message": "Error saving settings: $1", "description": "Error message when settings cannot be saved"},
+  "settingsSaved": {"message": "Settings saved successfully!", "description": "Success message when settings are saved"},
+  "groupingTabs": {"message": "Grouping tabs...", "description": "Message when grouping tabs"},
+  "tabsGrouped": {"message": "Tabs grouped successfully!", "description": "Success message when tabs are grouped"},
+  "errorGroupingTabs": {"message": "Error grouping tabs: $1", "description": "Error message when tabs cannot be grouped"},
+  "ungroupingTabs": {"message": "Ungrouping tabs...", "description": "Message when ungrouping tabs"},
+  "tabsUngrouped": {"message": "Tabs ungrouped successfully!", "description": "Success message when tabs are ungrouped"},
+  "errorUngroupingTabs": {"message": "Error ungrouping tabs: $1", "description": "Error message when tabs cannot be ungrouped"},
+  "sortingTabs": {"message": "Sorting tabs...", "description": "Message when sorting tabs"},
+  "tabsSorted": {"message": "Tabs sorted successfully!", "description": "Success message when tabs are sorted"},
+  "errorSortingTabs": {"message": "Error sorting tabs: $1", "description": "Error message when tabs cannot be sorted"},
+  "noGroupsToSort": {"message": "No tab groups to sort", "description": "Message when there are no tab groups to sort"},
+  "errorLoadingGroups": {"message": "Error loading tab groups", "description": "Error message when tab groups cannot be loaded"}
 }

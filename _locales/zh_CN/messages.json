@@ -1,204 +1,63 @@
 {
-  "extName": {
-    "message": "Edge 标签页整理器",
-    "description": "扩展名称"
-  },
-  "extDescription": {
-    "message": "使用 Edge 内置的标签页管理功能自动整理标签页",
-    "description": "扩展描述"
-  },
-  "groupByDomain": {
-    "message": "按域名分组标签页",
-    "description": "按域名分组标签页按钮"
-  },
-  "ungroupAll": {
-    "message": "取消所有标签页分组",
-    "description": "取消所有标签页分组按钮"
-  },
-  "settings": {
-    "message": "设置",
-    "description": "设置链接"
-  },
-  "noGroups": {
-    "message": "未找到标签页组",
-    "description": "未找到标签页组时的消息"
-  },
-  "settingsTitle": {
-    "message": "Edge 标签页整理器 - 设置",
-    "description": "设置页面标题"
-  },
-  "automaticGrouping": {
-    "message": "自动分组",
-    "description": "自动分组设置的部分标题"
-  },
-  "autoGroupByDomain": {
-    "message": "自动按域名分组标签页",
-    "description": "自动按域名分组标签页的选项"
-  },
-  "autoGroupOnCreation": {
-    "message": "创建新标签页时自动分组",
-    "description": "创建新标签页时自动分组的选项"
-  },
-  "groupByRootDomain": {
-    "message": "按根域名分组（例如，将 docs.example.com 和 forum.example.com 分到一组）",
-    "description": "按根域名分组的选项"
-  },
-  "ignoreTLD": {
-    "message": "忽略顶级域名（例如，将 example.com 和 example.org 分到一组）",
-    "description": "忽略顶级域名的选项"
-  },
-  "useDynamicColors": {
-    "message": "使用动态颜色（自动为不同域名分配不同颜色）",
-    "description": "使用动态颜色的选项"
-  },
-  "excludedDomains": {
-    "message": "排除的域名",
-    "description": "排除的域名部分标题"
-  },
-  "excludedDomainsDesc": {
-    "message": "来自这些域名的标签页将不会被自动分组：",
-    "description": "排除的域名描述"
-  },
-  "noDomains": {
-    "message": "没有排除的域名",
-    "description": "没有排除的域名时的消息"
-  },
-  "enterDomain": {
-    "message": "输入域名（例如，example.com）",
-    "description": "域名输入框的占位符"
-  },
-  "addDomain": {
-    "message": "添加域名",
-    "description": "添加域名按钮"
-  },
-  "colorScheme": {
-    "message": "颜色方案",
-    "description": "颜色方案部分标题"
-  },
-  "colorSchemeDesc": {
-    "message": "为特定域名自定义颜色：",
-    "description": "颜色方案描述"
-  },
-  "addDomainColor": {
-    "message": "添加域名颜色",
-    "description": "添加域名颜色按钮"
-  },
-  "saveSettings": {
-    "message": "保存设置",
-    "description": "保存设置按钮"
-  },
-  "domainAdded": {
-    "message": "域名已添加",
-    "description": "域名添加时的消息"
-  },
-  "domainRemoved": {
-    "message": "域名已移除",
-    "description": "域名移除时的消息"
-  },
-  "settingsSaved": {
-    "message": "设置保存成功！",
-    "description": "设置保存成功时的消息"
-  },
-  "errorSavingSettings": {
-    "message": "保存设置时出错：$ERROR$",
-    "description": "保存设置出错时的消息",
-    "placeholders": {
-      "error": {
-        "content": "$1",
-        "example": "未知错误"
-      }
-    }
-  },
-  "groupingTabs": {
-    "message": "正在按域名分组标签页...",
-    "description": "分组标签页时的消息"
-  },
-  "tabsGrouped": {
-    "message": "标签页分组成功！",
-    "description": "标签页分组成功时的消息"
-  },
-  "errorGroupingTabs": {
-    "message": "分组标签页时出错：$ERROR$",
-    "description": "分组标签页出错时的消息",
-    "placeholders": {
-      "error": {
-        "content": "$1",
-        "example": "未知错误"
-      }
-    }
-  },
-  "ungroupingTabs": {
-    "message": "正在取消所有标签页分组...",
-    "description": "取消标签页分组时的消息"
-  },
-  "tabsUngrouped": {
-    "message": "标签页取消分组成功！",
-    "description": "标签页取消分组成功时的消息"
-  },
-  "errorUngroupingTabs": {
-    "message": "取消标签页分组时出错：$ERROR$",
-    "description": "取消标签页分组出错时的消息",
-    "placeholders": {
-      "error": {
-        "content": "$1",
-        "example": "未知错误"
-      }
-    }
-  },
-  "errorLoadingGroups": {
-    "message": "加载标签页组时出错",
-    "description": "加载标签页组出错时的消息"
-  },
-  "unnamedGroup": {
-    "message": "（未命名组）",
-    "description": "未命名组的文本"
-  },
-  "grey": {
-    "message": "灰色",
-    "description": "颜色名称：灰色"
-  },
-  "blue": {
-    "message": "蓝色",
-    "description": "颜色名称：蓝色"
-  },
-  "red": {
-    "message": "红色",
-    "description": "颜色名称：红色"
-  },
-  "yellow": {
-    "message": "黄色",
-    "description": "颜色名称：黄色"
-  },
-  "green": {
-    "message": "绿色",
-    "description": "颜色名称：绿色"
-  },
-  "pink": {
-    "message": "粉色",
-    "description": "颜色名称：粉色"
-  },
-  "purple": {
-    "message": "紫色",
-    "description": "颜色名称：紫色"
-  },
-  "cyan": {
-    "message": "青色",
-    "description": "颜色名称：青色"
-  },
-  "orange": {
-    "message": "橙色",
-    "description": "颜色名称：橙色"
-  },
-  "remove": {
-    "message": "移除",
-    "description": "移除项目按钮"
-  },
-  "pleaseEnterDomain": {
-    "message": "请输入域名",
-    "description": "域名为空时的消息"
-  },
-  "domainAlreadyInList": {
-    "message": "域名已在列表中",
-    "description": "域名已在列表中时的消息"
-  }
+  "extName": {"message": "Edge 标签页组织器", "description": "扩展名称"},
+  "extDescription": {"message": "根据域名自动将标签页组织到组中", "description": "扩展描述"},
+  "groupByDomain": {"message": "按域名分组标签页", "description": "按域名分组标签页按钮"},
+  "ungroupAll": {"message": "取消所有标签页分组", "description": "取消所有标签页分组按钮"},
+  "sortTabs": {"message": "对组内标签页排序", "description": "对组内标签页排序按钮"},
+  "settings": {"message": "设置", "description": "设置链接"},
+  "noGroups": {"message": "未找到标签页组", "description": "未找到标签页组时的消息"},
+  "unnamedGroup": {"message": "未命名组", "description": "未命名标签页组的标签"},
+  "settingsTitle": {"message": "Edge 标签页组织器 - 设置", "description": "设置页面标题"},
+  "automaticGrouping": {"message": "自动分组", "description": "自动分组部分标题"},
+  "autoGroupByDomain": {"message": "自动按域名分组标签页", "description": "自动按域名分组标签页选项"},
+  "autoGroupOnCreation": {"message": "创建新标签页时自动分组", "description": "创建新标签页时自动分组选项"},
+  "groupByRootDomain": {"message": "按根域名分组（例如，将 docs.example.com 和 forum.example.com 分到一组）", "description": "按根域名分组选项"},
+  "ignoreTLD": {"message": "忽略顶级域名（例如，将 example.com 和 example.org 分到一组）", "description": "忽略顶级域名选项"},
+  "useDynamicColors": {"message": "使用动态颜色（自动为不同域名分配不同颜色）", "description": "使用动态颜色选项"},
+  "tabSorting": {"message": "标签页排序", "description": "标签页排序部分标题"},
+  "tabSortingDesc": {"message": "选择组内标签页的排序方式：", "description": "标签页排序部分描述"},
+  "enableTabSorting": {"message": "启用组内标签页自动排序", "description": "启用标签页自动排序选项"},
+  "sortByDomain": {"message": "按域名排序", "description": "按域名排序选项"},
+  "sortByTitle": {"message": "按标题排序", "description": "按标题排序选项"},
+  "sortByAccessTime": {"message": "按最近访问时间排序", "description": "按访问时间排序选项"},
+  "sortByCreateTime": {"message": "按创建时间排序", "description": "按创建时间排序选项"},
+  "sortByFrequency": {"message": "按使用频率排序", "description": "按使用频率排序选项"},
+  "sortBySmart": {"message": "智能排序", "description": "智能排序选项"},
+  "sortAscending": {"message": "升序排序（A-Z，最早的在前）", "description": "升序排序选项"},
+  "excludedDomains": {"message": "排除的域名", "description": "排除的域名部分标题"},
+  "excludedDomainsDesc": {"message": "来自这些域名的标签页将不会被自动分组：", "description": "排除的域名部分描述"},
+  "noDomains": {"message": "没有排除的域名", "description": "没有排除的域名时的消息"},
+  "enterDomain": {"message": "输入域名（例如，example.com）", "description": "域名输入框占位符"},
+  "addDomain": {"message": "添加域名", "description": "添加域名按钮"},
+  "colorScheme": {"message": "颜色方案", "description": "颜色方案部分标题"},
+  "colorSchemeDesc": {"message": "为特定域名自定义颜色：", "description": "颜色方案部分描述"},
+  "addDomainColor": {"message": "添加域名颜色", "description": "添加域名颜色按钮"},
+  "saveSettings": {"message": "保存设置", "description": "保存设置按钮"},
+  "grey": {"message": "灰色", "description": "灰色"},
+  "blue": {"message": "蓝色", "description": "蓝色"},
+  "red": {"message": "红色", "description": "红色"},
+  "yellow": {"message": "黄色", "description": "黄色"},
+  "green": {"message": "绿色", "description": "绿色"},
+  "pink": {"message": "粉色", "description": "粉色"},
+  "purple": {"message": "紫色", "description": "紫色"},
+  "cyan": {"message": "青色", "description": "青色"},
+  "orange": {"message": "橙色", "description": "橙色"},
+  "remove": {"message": "移除", "description": "移除按钮"},
+  "pleaseEnterDomain": {"message": "请输入域名", "description": "域名为空时的错误消息"},
+  "domainAlreadyInList": {"message": "域名已在列表中", "description": "域名已在列表中时的错误消息"},
+  "domainAdded": {"message": "域名已添加", "description": "域名添加成功时的消息"},
+  "domainRemoved": {"message": "域名已移除", "description": "域名移除成功时的消息"},
+  "errorSavingSettings": {"message": "保存设置时出错：$1", "description": "保存设置失败时的错误消息"},
+  "settingsSaved": {"message": "设置保存成功！", "description": "设置保存成功时的消息"},
+  "groupingTabs": {"message": "正在分组标签页...", "description": "分组标签页时的消息"},
+  "tabsGrouped": {"message": "标签页分组成功！", "description": "标签页分组成功时的消息"},
+  "errorGroupingTabs": {"message": "分组标签页时出错：$1", "description": "分组标签页失败时的错误消息"},
+  "ungroupingTabs": {"message": "正在取消标签页分组...", "description": "取消标签页分组时的消息"},
+  "tabsUngrouped": {"message": "标签页取消分组成功！", "description": "标签页取消分组成功时的消息"},
+  "errorUngroupingTabs": {"message": "取消标签页分组时出错：$1", "description": "取消标签页分组失败时的错误消息"},
+  "sortingTabs": {"message": "正在排序标签页...", "description": "排序标签页时的消息"},
+  "tabsSorted": {"message": "标签页排序成功！", "description": "标签页排序成功时的消息"},
+  "errorSortingTabs": {"message": "排序标签页时出错：$1", "description": "排序标签页失败时的错误消息"},
+  "noGroupsToSort": {"message": "没有可排序的标签页组", "description": "没有可排序的标签页组时的消息"},
+  "errorLoadingGroups": {"message": "加载标签页组时出错", "description": "加载标签页组失败时的错误消息"}
 }

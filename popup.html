@@ -190,6 +190,15 @@
     <button id="sortGroups" data-i18n="sortGroups">Sort Tab Groups</button>
   </div>
 
+  <!-- 调试按钮 -->
+  <div class="button-container" style="margin-top: 10px; border-top: 1px solid #ccc; padding-top: 10px;">
+    <button id="testConnection" style="background-color: #5a5a5a;">测试连接</button>
+    <button id="testGroupByDomain" style="background-color: #5a5a5a;">测试分组</button>
+    <button id="testUngroupAll" style="background-color: #5a5a5a;">测试取消分组</button>
+    <button id="testSortTabGroups" style="background-color: #5a5a5a;">测试排序</button>
+    <button id="testGetSortingMetrics" style="background-color: #5a5a5a;">测试获取指标</button>
+  </div>
+
   <div id="status" class="status"></div>
 
   <div id="groupList" class="group-list">
@@ -204,5 +213,7 @@
   <a href="options.html" class="settings-link" target="_blank" data-i18n="settings">Settings</a>
 
   <script src="popup.js"></script>
+  <script src="test.js"></script>
+  <script src="check-service-worker.js"></script>
 </body>
 </html>

@@ -44,70 +44,110 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Add event listeners
   groupByDomainButton.addEventListener('click', () => {
+    console.log('按域名分组按钮被点击');
     showStatus(getMessage('groupingTabs'), 'info');
 
-    chrome.runtime.sendMessage({ action: 'groupByDomain' }, (response) => {
-      if (response.success) {
-        showStatus(getMessage('tabsGrouped'), 'success');
-        loadTabGroups();
-      } else {
-        showStatus(getMessage('errorGroupingTabs', [response.error || 'Unknown error']), 'error');
-      }
-    });
+    try {
+      chrome.runtime.sendMessage({ action: 'groupByDomain' }, (response) => {
+        console.log('groupByDomain 响应:', response);
+
+        if (chrome.runtime.lastError) {
+          console.error('发送 groupByDomain 消息失败:', chrome.runtime.lastError);
+          showStatus(getMessage('errorGroupingTabs', [chrome.runtime.lastError.message || 'Unknown error']), 'error');
+          return;
+        }
+
+        if (response && response.success) {
+          showStatus(getMessage('tabsGrouped'), 'success');
+          loadTabGroups();
+        } else {
+          const errorMsg = response ? response.error : 'No response';
+          console.error('分组标签页失败:', errorMsg);
+          showStatus(getMessage('errorGroupingTabs', [errorMsg || 'Unknown error']), 'error');
+        }
+      });
+    } catch (error) {
+      console.error('发送 groupByDomain 消息时出错:', error);
+      showStatus(getMessage('errorGroupingTabs', [error.message || 'Unknown error']), 'error');
+    }
   });
 
   ungroupAllButton.addEventListener('click', () => {
+    console.log('取消所有标签页分组按钮被点击');
     showStatus(getMessage('ungroupingTabs'), 'info');
 
-    chrome.runtime.sendMessage({ action: 'ungroupAll' }, (response) => {
-      if (response.success) {
-        showStatus(getMessage('tabsUngrouped'), 'success');
-        loadTabGroups();
-      } else {
-        showStatus(getMessage('errorUngroupingTabs', [response.error || 'Unknown error']), 'error');
-      }
-    });
+    try {
+      chrome.runtime.sendMessage({ action: 'ungroupAll' }, (response) => {
+        console.log('ungroupAll 响应:', response);
+
+        if (chrome.runtime.lastError) {
+          console.error('发送 ungroupAll 消息失败:', chrome.runtime.lastError);
+          showStatus(getMessage('errorUngroupingTabs', [chrome.runtime.lastError.message || 'Unknown error']), 'error');
+          return;
+        }
+
+        if (response && response.success) {
+          showStatus(getMessage('tabsUngrouped'), 'success');
+          loadTabGroups();
+        } else {
+          const errorMsg = response ? response.error : 'No response';
+          console.error('取消分组标签页失败:', errorMsg);
+          showStatus(getMessage('errorUngroupingTabs', [errorMsg || 'Unknown error']), 'error');
+        }
+      });
+    } catch (error) {
+      console.error('发送 ungroupAll 消息时出错:', error);
+      showStatus(getMessage('errorUngroupingTabs', [error.message || 'Unknown error']), 'error');
+    }
   });
 
   sortTabsButton.addEventListener('click', () => {
+    console.log('对组内标签页排序按钮被点击');
     showStatus(getMessage('sortingTabs'), 'info');
 
     // 获取所有标签组
     chrome.tabGroups.query({ windowId: WINDOW_ID_CURRENT }, async (groups) => {
+      console.log('查询到的标签组:', groups);
       try {
-        if (groups.length === 0) {
+        if (!groups || groups.length === 0) {
+          console.log('没有标签组可排序');
           showStatus(getMessage('noGroupsToSort'), 'info');
           return;
         }
 
         // 对每个组进行排序
         for (const group of groups) {
-          await chrome.runtime.sendMessage({
+          console.log('正在对标签组排序:', group);
+          const response = await chrome.runtime.sendMessage({
             action: 'sortTabGroup',
             groupId: group.id
           });
+          console.log('sortTabGroup 响应:', response);
         }
 
         showStatus(getMessage('tabsSorted'), 'success');
         loadTabGroups();
       } catch (error) {
-        console.error('Error sorting tabs:', error);
+        console.error('排序标签页失败:', error);
         showStatus(getMessage('errorSortingTabs', [error.message || 'Unknown error']), 'error');
       }
     });
   });
 
   sortGroupsButton.addEventListener('click', () => {
+    console.log('对标签组排序按钮被点击');
     showStatus(getMessage('sortingGroups'), 'info');
 
     chrome.runtime.sendMessage({ action: 'sortTabGroups' }, (response) => {
+      console.log('sortTabGroups 响应:', response);
       if (response && response.success) {
         showStatus(getMessage('groupsSorted'), 'success');
         loadTabGroups();
         // 排序后获取并显示排序指标
         loadSortingMetrics();
       } else {
-        const error = response ? response.error : 'Unknown error';
+        const error = response ? response.error : 'No response';
+        console.error('排序标签组失败:', error);
         showStatus(getMessage('errorSortingGroups', [error]), 'error');
       }
     });
@@ -137,39 +177,69 @@ document.addEventListener('DOMContentLoaded', () => {
   // 加载并显示排序指标数据
   function loadSortingMetrics() {
     console.log('loadSortingMetrics function called');
-    chrome.runtime.sendMessage({ action: 'getSortingMetrics' }, (response) => {
-      console.log('getSortingMetrics response:', response);
 
-      // 检查响应是否存在
-      if (!response) {
-        console.error('No response received from getSortingMetrics');
-        const errorMsg = document.createElement('div');
-        errorMsg.textContent = 'Error: No response from background script';
-        sortingMetricsElement.innerHTML = '';
-        sortingMetricsElement.appendChild(errorMsg);
-        return;
-      }
+    // 清空指标容器
+    while (sortingMetricsElement.firstChild) {
+      sortingMetricsElement.removeChild(sortingMetricsElement.firstChild);
+    }
 
-      if (response && response.success) {
+    // 显示加载中消息
+    const loadingMsg = document.createElement('div');
+    loadingMsg.textContent = 'Loading metrics...';
+    sortingMetricsElement.appendChild(loadingMsg);
+
+    try {
+      chrome.runtime.sendMessage({ action: 'getSortingMetrics' }, (response) => {
+        console.log('getSortingMetrics response:', response);
+
         // 清空指标容器
         while (sortingMetricsElement.firstChild) {
           sortingMetricsElement.removeChild(sortingMetricsElement.firstChild);
         }
 
-        const metrics = response.metrics;
+        // 检查是否有运行时错误
+        if (chrome.runtime.lastError) {
+          console.error('发送 getSortingMetrics 消息失败:', chrome.runtime.lastError);
+          const errorMsg = document.createElement('div');
+          errorMsg.textContent = 'Error: ' + (chrome.runtime.lastError.message || 'Unknown error');
+          sortingMetricsElement.appendChild(errorMsg);
+          return;
+        }
+
+        // 检查响应是否存在
+        if (!response) {
+          console.error('No response received from getSortingMetrics');
+          const errorMsg = document.createElement('div');
+          errorMsg.textContent = 'Error: No response from background script';
+          sortingMetricsElement.appendChild(errorMsg);
+          return;
+        }
+
+        // 检查响应是否成功
+        if (!response.success) {
+          console.error('Error loading sorting metrics:', response.error || 'Unknown error');
+          const errorMsg = document.createElement('div');
+          errorMsg.textContent = 'Error: ' + (response.error || 'Unknown error');
+          sortingMetricsElement.appendChild(errorMsg);
+          return;
+        }
+
+        // 获取指标数据
+        const metrics = response.metrics || {};
         console.log('Metrics object:', metrics);
         console.log('Metrics keys:', Object.keys(metrics));
 
-        const sortingMethod = response.sortingMethod;
-        const sortAscending = response.sortAscending;
+        // 获取排序方法和排序顺序
+        const sortingMethod = response.sortingMethod || 'title';
+        const sortAscending = response.sortAscending !== undefined ? response.sortAscending : true;
         console.log('Sorting method:', sortingMethod);
         console.log('Sort ascending:', sortAscending);
 
         // 如果没有指标数据，显示提示信息
-        if (!metrics || Object.keys(metrics).length === 0) {
+        if (Object.keys(metrics).length === 0) {
           console.log('No metrics data available, showing message');
           const noMetricsMsg = document.createElement('div');
-          noMetricsMsg.textContent = getMessage('noSortingMetrics');
+          noMetricsMsg.textContent = 'No sorting metrics available';
           sortingMetricsElement.appendChild(noMetricsMsg);
           return;
         }
@@ -177,13 +247,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // 添加排序方法信息
         const methodInfo = document.createElement('div');
         methodInfo.className = 'metric-item';
-        methodInfo.innerHTML = `<span class="metric-name">${getMessage('sortingMethodLabel')}:</span> <span class="metric-value">${getMessage('sortBy' + sortingMethod.charAt(0).toUpperCase() + sortingMethod.slice(1))}</span>`;
+        methodInfo.innerHTML = `<span class="metric-name">Sorting method:</span> <span class="metric-value">${sortingMethod}</span>`;
         sortingMetricsElement.appendChild(methodInfo);
 
         // 添加排序顺序信息
         const orderInfo = document.createElement('div');
         orderInfo.className = 'metric-item';
-        orderInfo.innerHTML = `<span class="metric-name">${getMessage('sortingOrderLabel')}:</span> <span class="metric-value">${sortAscending ? getMessage('ascending') : getMessage('descending')}</span>`;
+        orderInfo.innerHTML = `<span class="metric-name">Sorting order:</span> <span class="metric-value">${sortAscending ? 'Ascending' : 'Descending'}</span>`;
         sortingMetricsElement.appendChild(orderInfo);
 
         // 添加分隔线
@@ -205,62 +275,30 @@ document.addEventListener('DOMContentLoaded', () => {
           groupTitle.style.marginBottom = '5px';
           groupTitle.style.padding = '3px 5px';
           groupTitle.style.borderRadius = '3px';
-          groupTitle.style.backgroundColor = getGroupColorBackground(groupMetrics.color);
-          groupTitle.style.color = getGroupColorText(groupMetrics.color);
-          groupTitle.textContent = groupMetrics.title;
+          groupTitle.style.backgroundColor = getGroupColorBackground(groupMetrics.color || 'grey');
+          groupTitle.style.color = getGroupColorText(groupMetrics.color || 'grey');
+          groupTitle.textContent = groupMetrics.title || 'Unnamed Group';
           sortingMetricsElement.appendChild(groupTitle);
 
-          // 根据排序方法显示相应的指标
-          switch (sortingMethod) {
-            case 'title':
-              addMetricItem(sortingMetricsElement, getMessage('titleLabel'), groupMetrics.title);
-              break;
-
-            case 'color':
-              addMetricItem(sortingMetricsElement, getMessage('colorLabel'), getMessage(groupMetrics.color));
-              addMetricItem(sortingMetricsElement, getMessage('colorOrderLabel'), groupMetrics.colorOrder);
-              break;
-
-            case 'size':
-              addMetricItem(sortingMetricsElement, getMessage('sizeLabel'), groupMetrics.size);
-              break;
-
-            case 'createTime':
-              addMetricItem(sortingMetricsElement, getMessage('createTimeLabel'), groupMetrics.createTimeFormatted);
-              break;
-
-            case 'lastAccessed':
-              addMetricItem(sortingMetricsElement, getMessage('lastAccessedLabel'), groupMetrics.lastAccessTimeFormatted);
-              break;
-
-            case 'smart':
-              // 添加智能排序的各项指标
-              addMetricItem(sortingMetricsElement, getMessage('accessTimeLabel'), groupMetrics.accessTime ? new Date(groupMetrics.accessTime).toLocaleString() : 'N/A');
-              addMetricItem(sortingMetricsElement, getMessage('accessScoreLabel'), groupMetrics.accessScore.toFixed(2), groupMetrics.accessWeight);
-
-              addMetricItem(sortingMetricsElement, getMessage('sizeLabel'), groupMetrics.size);
-              addMetricItem(sortingMetricsElement, getMessage('sizeScoreLabel'), groupMetrics.sizeScore.toFixed(2), groupMetrics.sizeWeight);
-
-              addMetricItem(sortingMetricsElement, getMessage('createTimeLabel'), groupMetrics.createTime ? new Date(groupMetrics.createTime).toLocaleString() : 'N/A');
-              addMetricItem(sortingMetricsElement, getMessage('createScoreLabel'), groupMetrics.createScore.toFixed(2), groupMetrics.createWeight);
-
-              // 添加最终分数
-              addMetricItem(sortingMetricsElement, getMessage('finalScoreLabel'), groupMetrics.finalScore.toFixed(2), 1.0);
-              break;
-          }
+          // 添加排序值
+          addMetricItem(sortingMetricsElement, 'Sort Value', groupMetrics.sortValue);
         }
 
         // 显示指标容器
         sortingMetricsContainer.style.display = 'block';
-      } else {
-        console.error('Error loading sorting metrics:', response ? response.error : 'Unknown error');
-        // 显示错误信息
-        sortingMetricsElement.innerHTML = '';
-        const errorMsg = document.createElement('div');
-        errorMsg.textContent = 'Error loading metrics: ' + (response ? response.error : 'Unknown error');
-        sortingMetricsElement.appendChild(errorMsg);
+      });
+    } catch (error) {
+      console.error('发送 getSortingMetrics 消息时出错:', error);
+
+      // 清空指标容器
+      while (sortingMetricsElement.firstChild) {
+        sortingMetricsElement.removeChild(sortingMetricsElement.firstChild);
       }
-    });
+
+      const errorMsg = document.createElement('div');
+      errorMsg.textContent = 'Error: ' + (error.message || 'Unknown error');
+      sortingMetricsElement.appendChild(errorMsg);
+    }
   }
 
   // 添加指标项
@@ -297,22 +335,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Function to load and display current tab groups
   async function loadTabGroups() {
+    console.log('加载标签组列表');
     try {
       // Get all tab groups in the current window
       const groups = await chrome.tabGroups.query({ windowId: WINDOW_ID_CURRENT });
+      console.log('查询到的标签组:', groups);
 
       // Clear the group list
       while (groupListElement.firstChild) {
         groupListElement.removeChild(groupListElement.firstChild);
       }
 
-      if (groups.length === 0) {
+      if (!groups || groups.length === 0) {
+        console.log('没有标签组，显示提示信息');
         groupListElement.appendChild(noGroupsElement);
         return;
       }
 
       // Get all tabs to count tabs in each group
       const tabs = await chrome.tabs.query({ currentWindow: true });
+      console.log('查询到的标签页:', tabs);
 
       // Create a map of group IDs to tab counts
       const groupTabCounts = {};
@@ -321,9 +363,11 @@ document.addEventListener('DOMContentLoaded', () => {
           groupTabCounts[tab.groupId] = (groupTabCounts[tab.groupId] || 0) + 1;
         }
       });
+      console.log('标签组计数:', groupTabCounts);
 
       // Add each group to the list
       groups.forEach(group => {
+        console.log('添加标签组到列表:', group);
         const groupItem = document.createElement('div');
         groupItem.className = 'group-item';
         groupItem.style.backgroundColor = getGroupColorBackground(group.color);
@@ -346,7 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
         groupListElement.appendChild(groupItem);
       });
     } catch (error) {
-      console.error('Error loading tab groups:', error);
+      console.error('加载标签组失败:', error);
       showStatus(getMessage('errorLoadingGroups'), 'error');
     }
   }

@@ -1,3 +1,6 @@
+// 初始化 service worker
+console.log('Edge Tab Organizer - Background Service Worker 已启动');
+
 // Helper function to get localized message
 function getMessage(messageName, substitutions) {
   return chrome.i18n.getMessage(messageName, substitutions);
@@ -69,8 +72,12 @@ const TAB_GROUP_ID_NONE = -1;
 
 // Load settings when extension starts
 chrome.storage.sync.get('tabOrganizerSettings', (data) => {
+  console.log('Loading settings from storage:', data);
   if (data.tabOrganizerSettings) {
     settings = data.tabOrganizerSettings;
+    console.log('Settings loaded:', settings);
+  } else {
+    console.log('No settings found, using defaults:', settings);
   }
 });
 
@@ -412,18 +419,28 @@ function getDomainForGrouping(url) {
 
 // Group tabs by domain
 async function groupTabsByDomain() {
+  console.log('开始按域名分组标签页');
   try {
     // Get all tabs in the current window
     const tabs = await chrome.tabs.query({ currentWindow: true });
+    console.log('查询到的标签页:', tabs);
 
     // Group tabs by domain
     const domainGroups = {};
 
     tabs.forEach(tab => {
-      if (!tab.url) return;
+      if (!tab.url) {
+        console.log('标签页没有URL:', tab);
+        return;
+      }
 
       const domain = getDomainForGrouping(tab.url);
-      if (!domain || settings.excludeDomains.includes(domain)) return;
+      console.log('标签页域名:', tab.url, '-> 分组域名:', domain);
+
+      if (!domain || settings.excludeDomains.includes(domain)) {
+        console.log('域名为空或被排除:', domain);
+        return;
+      }
 
       if (!domainGroups[domain]) {
         domainGroups[domain] = [];
@@ -432,9 +449,12 @@ async function groupTabsByDomain() {
       domainGroups[domain].push(tab.id);
     });
 
+    console.log('域名分组结果:', domainGroups);
+
     // Create or update groups
     for (const domain in domainGroups) {
       const tabIds = domainGroups[domain];
+      console.log('处理域名:', domain, '标签页IDs:', tabIds);
 
       // 不再跳过单个标签页，所有标签页都分组
 
@@ -444,15 +464,22 @@ async function groupTabsByDomain() {
       for (const tabId of tabIds) {
         const tab = await chrome.tabs.get(tabId);
         if (tab.groupId && tab.groupId !== TAB_GROUP_ID_NONE) {
-          const group = await chrome.tabGroups.get(tab.groupId);
-          if (group.title === domain) {
-            existingGroupId = tab.groupId;
-            break;
+          try {
+            const group = await chrome.tabGroups.get(tab.groupId);
+            console.log('标签页已在组中:', tab, '组:', group);
+            if (group.title === domain) {
+              existingGroupId = tab.groupId;
+              console.log('找到现有组:', existingGroupId);
+              break;
+            }
+          } catch (error) {
+            console.error('获取标签组信息失败:', error);
           }
         }
       }
 
       // 创建或更新标签组
+      console.log('创建或更新标签组:', domain, '使用现有组ID:', existingGroupId);
       await createOrUpdateTabGroup(tabIds, domain, existingGroupId);
     }
   } catch (error) {
@@ -462,18 +489,33 @@ async function groupTabsByDomain() {
 
 // Handle tab creation
 chrome.tabs.onCreated.addListener(async (tab) => {
-  if (!settings.autoGroupOnCreation) return;
+  console.log('Tab created:', tab);
+  console.log('autoGroupOnCreation setting:', settings.autoGroupOnCreation);
+
+  if (!settings.autoGroupOnCreation) {
+    console.log('Auto group on creation is disabled');
+    return;
+  }
 
   // Wait a moment for the tab to load
   setTimeout(async () => {
     try {
       // Get updated tab info
       const updatedTab = await chrome.tabs.get(tab.id);
+      console.log('Updated tab info:', updatedTab);
 
-      if (!updatedTab.url) return;
+      if (!updatedTab.url) {
+        console.log('Tab has no URL, skipping');
+        return;
+      }
 
       const domain = getDomainForGrouping(updatedTab.url);
-      if (!domain || settings.excludeDomains.includes(domain)) return;
+      console.log('Domain for grouping:', domain);
+
+      if (!domain || settings.excludeDomains.includes(domain)) {
+        console.log('Domain is empty or excluded, skipping');
+        return;
+      }
 
       // Find existing group with this domain
       const tabs = await chrome.tabs.query({ currentWindow: true });
@@ -570,13 +612,20 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 
 // 对标签组内的标签进行排序
 async function sortTabsInGroup(groupId) {
+  console.log('开始对标签组内的标签进行排序, groupId:', groupId);
   try {
     // 获取组内所有标签
     const tabs = await chrome.tabs.query({ groupId });
-    if (tabs.length <= 1) return; // 只有一个标签不需要排序
+    console.log('组内标签页:', tabs);
+
+    if (!tabs || tabs.length <= 1) {
+      console.log('标签页数量不足，无需排序');
+      return; // 只有一个标签不需要排序
+    }
 
     // 根据设置的排序方法对标签进行排序
     let sortedTabs = [...tabs];
+    console.log('排序方法:', settings.sortingMethod, '升序:', settings.sortAscending);
 
     switch (settings.sortingMethod) {
       case 'domain':
@@ -696,30 +745,39 @@ chrome.tabs.onRemoved.addListener(tabId => {
 
 // 创建或更新标签组，并应用排序
 async function createOrUpdateTabGroup(tabIds, domain, existingGroupId = null) {
+  console.log('创建或更新标签组 - 标签IDs:', tabIds, '标题:', domain, '现有组ID:', existingGroupId);
   try {
     let groupId;
 
     if (existingGroupId) {
       // 添加到现有组
+      console.log('添加标签到现有组:', tabIds, '-> 组ID:', existingGroupId);
       await chrome.tabs.group({ tabIds, groupId: existingGroupId });
       groupId = existingGroupId;
+      console.log('标签已添加到现有组');
     } else {
       // 创建新组
+      console.log('创建新标签组，标签IDs:', tabIds);
       groupId = await chrome.tabs.group({ tabIds });
+      console.log('新组创建成功，ID:', groupId);
 
       // 设置组标题和颜色
       const color = getColorForDomain(domain);
+      console.log('为域名设置颜色:', domain, '-> 颜色:', color);
       await chrome.tabGroups.update(groupId, {
         title: domain,
         color: color
       });
+      console.log('组标题和颜色已设置');
     }
 
     // 如果启用了标签排序，对组内标签进行排序
     if (settings.enableTabSorting) {
+      console.log('对组内标签进行排序, 组ID:', groupId);
       await sortTabsInGroup(groupId);
     }
 
+    console.log('标签组创建/更新成功, ID:', groupId);
     return groupId;
   } catch (error) {
     console.error('Error creating or updating tab group:', error);
@@ -729,13 +787,22 @@ async function createOrUpdateTabGroup(tabIds, domain, existingGroupId = null) {
 
 // 对窗口中的所有标签组进行排序
 async function sortTabGroups(windowId = chrome.windows.WINDOW_ID_CURRENT) {
+  console.log('开始对窗口中的所有标签组进行排序, windowId:', windowId);
   try {
     // 如果没有启用标签组排序，直接返回
-    if (!settings.enableGroupSorting) return;
+    if (!settings.enableGroupSorting) {
+      console.log('标签组排序未启用，退出');
+      return;
+    }
 
     // 获取窗口中的所有标签组
     const groups = await chrome.tabGroups.query({ windowId });
-    if (groups.length <= 1) return; // 只有一个组不需要排序
+    console.log('窗口中的标签组:', groups);
+
+    if (!groups || groups.length <= 1) {
+      console.log('标签组数量不足，无需排序');
+      return; // 只有一个组不需要排序
+    }
 
     // 清除旧的排序指标数据
     groups.forEach(group => {
@@ -743,6 +810,7 @@ async function sortTabGroups(windowId = chrome.windows.WINDOW_ID_CURRENT) {
         delete groupSortingMetrics[group.id];
       }
     });
+    console.log('排序方法:', settings.groupSortingMethod, '升序:', settings.groupSortAscending);
 
     // 获取每个组的第一个标签页的索引，用于确定组的位置
     const groupPositions = {};
@@ -1035,8 +1103,31 @@ chrome.tabs.onMoved.addListener(async (tabId, _moveInfo) => {
 
 // Listen for messages from popup or options page
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  console.log('收到消息:', message);
+
+  // 测试消息处理
+  if (message.action === 'test') {
+    console.log('收到测试消息:', message.data);
+    sendResponse({ success: true, message: 'Background script received your message: ' + message.data });
+    return true;
+  }
+
+  // 检查 service worker 状态
+  if (message.action === 'checkServiceWorker') {
+    console.log('收到检查 service worker 状态消息');
+    sendResponse({
+      success: true,
+      message: 'Service worker is active',
+      timestamp: Date.now(),
+      settings: settings
+    });
+    return true;
+  }
+
   if (message.action === 'groupByDomain') {
+    console.log('处理 groupByDomain 消息');
     groupTabsByDomain().then(() => {
+      console.log('groupByDomain 成功完成');
       sendResponse({ success: true });
     }).catch(error => {
       console.error('Error in groupByDomain:', error);
@@ -1046,13 +1137,17 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message.action === 'ungroupAll') {
+    console.log('处理 ungroupAll 消息');
     chrome.tabs.query({ currentWindow: true }, async (tabs) => {
+      console.log('查询到的标签页:', tabs);
       try {
         for (const tab of tabs) {
           if (tab.groupId && tab.groupId !== TAB_GROUP_ID_NONE) {
+            console.log('取消分组标签页:', tab);
             await chrome.tabs.ungroup(tab.id);
           }
         }
+        console.log('ungroupAll 成功完成');
         sendResponse({ success: true });
       } catch (error) {
         console.error('Error in ungroupAll:', error);
@@ -1063,7 +1158,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message.action === 'sortTabGroup') {
+    console.log('处理 sortTabGroup 消息, groupId:', message.groupId);
     sortTabsInGroup(message.groupId).then(() => {
+      console.log('sortTabGroup 成功完成');
       sendResponse({ success: true });
     }).catch(error => {
       console.error('Error in sortTabGroup:', error);
@@ -1073,7 +1170,9 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message.action === 'sortTabGroups') {
+    console.log('处理 sortTabGroups 消息');
     sortTabGroups().then(() => {
+      console.log('sortTabGroups 成功完成');
       sendResponse({ success: true });
     }).catch(error => {
       console.error('Error in sortTabGroups:', error);

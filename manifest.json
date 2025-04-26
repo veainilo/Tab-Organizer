@@ -8,10 +8,11 @@
     "tabs",
     "tabGroups",
     "storage",
-    "windows"
+    "windows",
+    "management"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background-simple.js"
   },
   "action": {
     "default_popup": "popup.html",

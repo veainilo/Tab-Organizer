@@ -112,8 +112,22 @@ async function groupTabsByDomain() {
       return true;
     }
 
+    // 获取当前窗口的所有标签组
+    const groups = await chrome.tabGroups.query({ windowId: chrome.windows.WINDOW_ID_CURRENT });
+    console.log('当前窗口的标签组:', groups.length, '个');
+
+    // 创建域名到组ID的映射
+    const domainToGroupId = {};
+    for (const group of groups) {
+      if (group.title) {
+        domainToGroupId[group.title] = group.id;
+      }
+    }
+    console.log('域名到组ID的映射:', domainToGroupId);
+
     // 按域名分组
     const domainGroups = {};
+    const existingGroups = {};
 
     for (const tab of tabs) {
       if (!tab.url) continue;
@@ -121,21 +135,52 @@ async function groupTabsByDomain() {
       const domain = getDomainForGrouping(tab.url);
       if (!domain || settings.excludeDomains.includes(domain)) continue;
 
-      if (!domainGroups[domain]) {
-        domainGroups[domain] = [];
+      // 检查标签页是否已经在正确的组中
+      if (tab.groupId !== TAB_GROUP_ID_NONE) {
+        try {
+          const group = await chrome.tabGroups.get(tab.groupId);
+          if (group.title === domain) {
+            console.log('标签页已在正确的组中:', tab.id, '组:', group.title);
+            continue; // 已经在正确的组中，跳过
+          }
+        } catch (error) {
+          console.error('获取标签组信息失败:', error);
+        }
       }
 
-      domainGroups[domain].push(tab.id);
+      // 检查是否已存在该域名的组
+      if (domainToGroupId[domain]) {
+        if (!existingGroups[domain]) {
+          existingGroups[domain] = [];
+        }
+        existingGroups[domain].push(tab.id);
+      } else {
+        if (!domainGroups[domain]) {
+          domainGroups[domain] = [];
+        }
+        domainGroups[domain].push(tab.id);
+      }
     }
 
-    console.log('域名分组结果:', Object.keys(domainGroups).length, '个组');
+    console.log('新域名分组结果:', Object.keys(domainGroups).length, '个组');
+    console.log('已存在域名分组结果:', Object.keys(existingGroups).length, '个组');
 
-    // 创建标签组
+    // 处理已存在的组
+    for (const domain in existingGroups) {
+      const tabIds = existingGroups[domain];
+      if (tabIds.length === 0) continue;
+
+      console.log('添加到已存在的组:', domain, '标签页数量:', tabIds.length);
+      await chrome.tabs.group({ tabIds, groupId: domainToGroupId[domain] });
+      console.log('标签页已添加到现有组');
+    }
+
+    // 创建新的标签组
     for (const domain in domainGroups) {
       const tabIds = domainGroups[domain];
-      console.log('处理域名:', domain, '标签页数量:', tabIds.length);
+      if (tabIds.length === 0) continue;
 
-      // 创建新组
+      console.log('创建新组:', domain, '标签页数量:', tabIds.length);
       const groupId = await chrome.tabs.group({ tabIds });
       console.log('新组创建成功，ID:', groupId);
 
@@ -383,17 +428,37 @@ chrome.tabs.onCreated.addListener(async (tab) => {
         return;
       }
 
-      // 创建新组
-      const groupId = await chrome.tabs.group({ tabIds: [tab.id] });
-      console.log('新组创建成功，ID:', groupId);
+      // 获取当前窗口的所有标签组
+      const groups = await chrome.tabGroups.query({ windowId: chrome.windows.WINDOW_ID_CURRENT });
+      console.log('当前窗口的标签组:', groups.length, '个');
 
-      // 设置组标题和颜色
-      const color = getColorForDomain(domain);
-      await chrome.tabGroups.update(groupId, {
-        title: domain,
-        color: color
-      });
-      console.log('组标题和颜色已设置');
+      // 查找是否已存在该域名的组
+      let existingGroupId = null;
+      for (const group of groups) {
+        if (group.title === domain) {
+          existingGroupId = group.id;
+          break;
+        }
+      }
+
+      if (existingGroupId) {
+        // 添加到现有组
+        console.log('添加到已存在的组:', domain, '组ID:', existingGroupId);
+        await chrome.tabs.group({ tabIds: [tab.id], groupId: existingGroupId });
+        console.log('标签页已添加到现有组');
+      } else {
+        // 创建新组
+        const groupId = await chrome.tabs.group({ tabIds: [tab.id] });
+        console.log('新组创建成功，ID:', groupId);
+
+        // 设置组标题和颜色
+        const color = getColorForDomain(domain);
+        await chrome.tabGroups.update(groupId, {
+          title: domain,
+          color: color
+        });
+        console.log('组标题和颜色已设置');
+      }
     } catch (error) {
       console.error('Error handling new tab:', error);
     }
@@ -421,22 +486,55 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
         return;
       }
 
-      // If tab is in a group, remove it
+      // 检查标签页是否已经在正确的组中
+      if (tab.groupId !== TAB_GROUP_ID_NONE) {
+        try {
+          const group = await chrome.tabGroups.get(tab.groupId);
+          if (group.title === domain) {
+            console.log('标签页已在正确的组中:', tabId, '组:', group.title);
+            return; // 已经在正确的组中，不需要任何操作
+          }
+        } catch (error) {
+          console.error('获取标签组信息失败:', error);
+        }
+      }
+
+      // 获取当前窗口的所有标签组
+      const groups = await chrome.tabGroups.query({ windowId: chrome.windows.WINDOW_ID_CURRENT });
+      console.log('当前窗口的标签组:', groups.length, '个');
+
+      // 查找是否已存在该域名的组
+      let existingGroupId = null;
+      for (const group of groups) {
+        if (group.title === domain) {
+          existingGroupId = group.id;
+          break;
+        }
+      }
+
+      // 如果标签页在其他组中，先移除
       if (tab.groupId && tab.groupId !== TAB_GROUP_ID_NONE) {
         await chrome.tabs.ungroup(tabId);
       }
 
-      // 创建新组
-      const groupId = await chrome.tabs.group({ tabIds: [tabId] });
-      console.log('新组创建成功，ID:', groupId);
+      if (existingGroupId) {
+        // 添加到现有组
+        console.log('添加到已存在的组:', domain, '组ID:', existingGroupId);
+        await chrome.tabs.group({ tabIds: [tabId], groupId: existingGroupId });
+        console.log('标签页已添加到现有组');
+      } else {
+        // 创建新组
+        const groupId = await chrome.tabs.group({ tabIds: [tabId] });
+        console.log('新组创建成功，ID:', groupId);
 
-      // 设置组标题和颜色
-      const color = getColorForDomain(domain);
-      await chrome.tabGroups.update(groupId, {
-        title: domain,
-        color: color
-      });
-      console.log('组标题和颜色已设置');
+        // 设置组标题和颜色
+        const color = getColorForDomain(domain);
+        await chrome.tabGroups.update(groupId, {
+          title: domain,
+          color: color
+        });
+        console.log('组标题和颜色已设置');
+      }
     } catch (error) {
       console.error('Error handling tab update:', error);
     }

@@ -1153,13 +1153,31 @@ document.addEventListener('DOMContentLoaded', () => {
           e.stopPropagation(); // 阻止事件冒泡
 
           const isExpanded = expandButton.dataset.expanded === 'true';
-          expandButton.dataset.expanded = isExpanded ? 'false' : 'true';
-          expandButton.innerHTML = isExpanded ? '&#9660;' : '&#9650;'; // 向下或向上箭头
-          tabListContainer.style.display = isExpanded ? 'none' : 'block';
+          const newExpandedState = !isExpanded;
+          expandButton.dataset.expanded = newExpandedState.toString();
+
+          // 更新按钮图标和容器显示状态
+          expandButton.innerHTML = newExpandedState ? '&#9650;' : '&#9660;'; // 向上或向下箭头
+          tabListContainer.style.display = newExpandedState ? 'block' : 'none';
+
+          console.log(`标签组 ${group.id} 展开状态切换:`, isExpanded, '->', newExpandedState);
+          console.log(`标签列表容器显示状态:`, tabListContainer.style.display);
         });
 
-        // 添加标签列表容器到组项之后
-        groupItem.insertAdjacentElement('afterend', tabListContainer);
+        // 创建一个包装容器，包含标签组项和标签列表
+        const groupWrapper = document.createElement('div');
+        groupWrapper.className = 'group-wrapper';
+
+        // 添加标签组项到包装容器
+        groupWrapper.appendChild(groupItem);
+
+        // 添加标签列表容器到包装容器
+        groupWrapper.appendChild(tabListContainer);
+
+        // 调试信息
+        console.log(`标签组 ${group.id} 的标签列表容器:`, tabListContainer);
+        console.log(`标签组 ${group.id} 内有 ${groupTabs.length} 个标签`);
+        console.log(`标签组 ${group.id} 的展开状态:`, wasExpanded);
 
         // 添加点击事件
         groupItem.addEventListener('click', () => {
@@ -1167,7 +1185,8 @@ document.addEventListener('DOMContentLoaded', () => {
           expandButton.click();
         });
 
-        groupListElement.appendChild(groupItem);
+        // 将整个包装容器添加到标签组列表
+        groupListElement.appendChild(groupWrapper);
       });
 
       // 辅助函数：排序所有标签组

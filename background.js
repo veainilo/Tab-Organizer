@@ -1086,19 +1086,93 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     console.log('getSortingMetrics message received');
     try {
       // 获取当前窗口的所有标签组
-      chrome.tabGroups.query({ windowId: chrome.windows.WINDOW_ID_CURRENT }, (groups) => {
-        console.log('Tab groups found:', groups);
+      chrome.tabGroups.query({ windowId: chrome.windows.WINDOW_ID_CURRENT }, async (groups) => {
+        console.log('Tab groups found:', groups, 'Length:', groups.length);
         // 为每个组添加标题信息
         const metricsWithTitles = {};
-        groups.forEach(group => {
-          if (groupSortingMetrics[group.id]) {
-            metricsWithTitles[group.id] = {
-              ...groupSortingMetrics[group.id],
-              title: group.title || 'Unnamed Group',
-              color: group.color
-            };
+
+        // 如果没有标签组，返回空对象
+        if (!groups || groups.length === 0) {
+          console.log('No tab groups found, returning empty metrics');
+          sendResponse({
+            success: true,
+            metrics: metricsWithTitles,
+            sortingMethod: settings.groupSortingMethod,
+            sortAscending: settings.groupSortAscending
+          });
+          return;
+        }
+
+        // 为每个组创建基本指标数据
+        for (const group of groups) {
+          // 如果没有排序指标数据，创建基本数据
+          if (!groupSortingMetrics[group.id]) {
+            // 获取组内标签页数量
+            const tabs = await chrome.tabs.query({ groupId: group.id });
+            const groupSize = tabs.length;
+
+            // 根据排序方法创建基本指标数据
+            switch (settings.groupSortingMethod) {
+              case 'title':
+                groupSortingMetrics[group.id] = {
+                  title: group.title || 'Unnamed Group',
+                  sortValue: group.title || 'Unnamed Group'
+                };
+                break;
+
+              case 'color':
+                const colorOrder = {
+                  'grey': 0, 'blue': 1, 'red': 2, 'yellow': 3,
+                  'green': 4, 'pink': 5, 'purple': 6, 'cyan': 7, 'orange': 8
+                };
+                groupSortingMetrics[group.id] = {
+                  color: group.color,
+                  colorOrder: colorOrder[group.color] || 0,
+                  sortValue: colorOrder[group.color] || 0
+                };
+                break;
+
+              case 'size':
+                groupSortingMetrics[group.id] = {
+                  size: groupSize,
+                  sortValue: groupSize
+                };
+                break;
+
+              case 'createTime':
+                const createTime = groupCreateTimes[group.id] || Date.now();
+                const createDate = new Date(createTime);
+                groupSortingMetrics[group.id] = {
+                  createTime: createTime,
+                  createTimeFormatted: createDate.toLocaleString(),
+                  sortValue: createTime
+                };
+                break;
+
+              case 'lastAccessed':
+                const accessTime = groupLastAccessTimes[group.id] || Date.now();
+                const accessDate = new Date(accessTime);
+                groupSortingMetrics[group.id] = {
+                  lastAccessTime: accessTime,
+                  lastAccessTimeFormatted: accessDate.toLocaleString(),
+                  sortValue: accessTime
+                };
+                break;
+
+              case 'smart':
+                // 为智能排序创建基本指标数据
+                calculateGroupSmartScore(group.id, groupSize);
+                break;
+            }
           }
-        });
+
+          // 添加到返回对象
+          metricsWithTitles[group.id] = {
+            ...groupSortingMetrics[group.id],
+            title: group.title || 'Unnamed Group',
+            color: group.color
+          };
+        }
 
         sendResponse({
           success: true,

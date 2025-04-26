@@ -139,6 +139,17 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('loadSortingMetrics function called');
     chrome.runtime.sendMessage({ action: 'getSortingMetrics' }, (response) => {
       console.log('getSortingMetrics response:', response);
+
+      // 检查响应是否存在
+      if (!response) {
+        console.error('No response received from getSortingMetrics');
+        const errorMsg = document.createElement('div');
+        errorMsg.textContent = 'Error: No response from background script';
+        sortingMetricsElement.innerHTML = '';
+        sortingMetricsElement.appendChild(errorMsg);
+        return;
+      }
+
       if (response && response.success) {
         // 清空指标容器
         while (sortingMetricsElement.firstChild) {
@@ -146,11 +157,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const metrics = response.metrics;
+        console.log('Metrics object:', metrics);
+        console.log('Metrics keys:', Object.keys(metrics));
+
         const sortingMethod = response.sortingMethod;
         const sortAscending = response.sortAscending;
+        console.log('Sorting method:', sortingMethod);
+        console.log('Sort ascending:', sortAscending);
 
         // 如果没有指标数据，显示提示信息
-        if (Object.keys(metrics).length === 0) {
+        if (!metrics || Object.keys(metrics).length === 0) {
+          console.log('No metrics data available, showing message');
           const noMetricsMsg = document.createElement('div');
           noMetricsMsg.textContent = getMessage('noSortingMetrics');
           sortingMetricsElement.appendChild(noMetricsMsg);
@@ -237,6 +254,11 @@ document.addEventListener('DOMContentLoaded', () => {
         sortingMetricsContainer.style.display = 'block';
       } else {
         console.error('Error loading sorting metrics:', response ? response.error : 'Unknown error');
+        // 显示错误信息
+        sortingMetricsElement.innerHTML = '';
+        const errorMsg = document.createElement('div');
+        errorMsg.textContent = 'Error loading metrics: ' + (response ? response.error : 'Unknown error');
+        sortingMetricsElement.appendChild(errorMsg);
       }
     });
   }

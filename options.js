@@ -32,8 +32,25 @@ let defaultColorSelect;
 let saveSettingsButton;
 let statusElement;
 
+// 本地化 UI 元素
+function localizeUI() {
+  // 本地化所有带有 data-i18n 属性的元素
+  document.querySelectorAll('[data-i18n]').forEach(element => {
+    const messageName = element.getAttribute('data-i18n');
+    element.textContent = getMessage(messageName);
+  });
+
+  // 本地化所有带有 data-i18n-placeholder 属性的输入元素
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
+    const messageName = element.getAttribute('data-i18n-placeholder');
+    element.placeholder = getMessage(messageName);
+  });
+}
+
 // Wait for DOM to load
 document.addEventListener('DOMContentLoaded', () => {
+  // 本地化 UI
+  localizeUI();
   // Get UI elements
   autoGroupByDomainCheckbox = document.getElementById('autoGroupByDomain');
   autoGroupOnCreationCheckbox = document.getElementById('autoGroupOnCreation');
@@ -197,6 +214,7 @@ function addColorMappingToUI(domain, color) {
   domainInput.type = 'text';
   domainInput.value = domain;
   domainInput.placeholder = getMessage('enterDomain');
+  domainInput.setAttribute('data-i18n-placeholder', 'enterDomain');
 
   const colorSelect = document.createElement('select');
   const colors = ['grey', 'blue', 'red', 'yellow', 'green', 'pink', 'purple', 'cyan', 'orange'];
@@ -205,12 +223,14 @@ function addColorMappingToUI(domain, color) {
     const option = document.createElement('option');
     option.value = c;
     option.textContent = getMessage(c);
+    option.setAttribute('data-i18n', c);
     option.selected = c === color;
     colorSelect.appendChild(option);
   });
 
   const removeButton = document.createElement('button');
   removeButton.textContent = getMessage('remove');
+  removeButton.setAttribute('data-i18n', 'remove');
   removeButton.style.backgroundColor = '#d83b01';
   removeButton.style.color = 'white';
   removeButton.style.border = 'none';

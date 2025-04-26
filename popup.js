@@ -7,8 +7,26 @@ function getMessage(messageName, substitutions) {
   return chrome.i18n.getMessage(messageName, substitutions);
 }
 
+// 本地化 UI 元素
+function localizeUI() {
+  // 本地化所有带有 data-i18n 属性的元素
+  document.querySelectorAll('[data-i18n]').forEach(element => {
+    const messageName = element.getAttribute('data-i18n');
+    element.textContent = getMessage(messageName);
+  });
+
+  // 本地化所有带有 data-i18n-placeholder 属性的输入元素
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
+    const messageName = element.getAttribute('data-i18n-placeholder');
+    element.placeholder = getMessage(messageName);
+  });
+}
+
 // Wait for DOM to load
 document.addEventListener('DOMContentLoaded', () => {
+  // 本地化 UI
+  localizeUI();
+
   // Get UI elements
   const groupByDomainButton = document.getElementById('groupByDomain');
   const ungroupAllButton = document.getElementById('ungroupAll');
@@ -102,6 +120,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const groupTitle = document.createElement('span');
         groupTitle.className = 'group-title';
         groupTitle.textContent = group.title || getMessage('unnamedGroup');
+        if (!group.title) {
+          groupTitle.setAttribute('data-i18n', 'unnamedGroup');
+        }
 
         const groupCount = document.createElement('span');
         groupCount.className = 'group-count';

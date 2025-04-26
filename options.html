@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>__MSG_settingsTitle__</title>
+  <title>Edge Tab Organizer - Settings</title>
   <meta charset="UTF-8">
   <style>
     body {
@@ -162,86 +162,86 @@
   </style>
 </head>
 <body>
-  <h1>__MSG_settingsTitle__</h1>
+  <h1 id="settingsTitle" data-i18n="settingsTitle">Edge Tab Organizer - Settings</h1>
 
   <div class="section">
-    <div class="section-title">__MSG_automaticGrouping__</div>
+    <div class="section-title" data-i18n="automaticGrouping">Automatic Grouping</div>
 
     <div class="option">
       <label>
         <input type="checkbox" id="autoGroupByDomain">
-        __MSG_autoGroupByDomain__
+        <span data-i18n="autoGroupByDomain">Automatically group tabs by domain</span>
       </label>
     </div>
 
     <div class="option">
       <label>
         <input type="checkbox" id="autoGroupOnCreation">
-        __MSG_autoGroupOnCreation__
+        <span data-i18n="autoGroupOnCreation">Automatically group new tabs when created</span>
       </label>
     </div>
 
     <div class="option">
       <label>
         <input type="checkbox" id="groupByRootDomain">
-        __MSG_groupByRootDomain__
+        <span data-i18n="groupByRootDomain">Group by root domain (e.g., group docs.example.com and forum.example.com together)</span>
       </label>
     </div>
 
     <div class="option">
       <label>
         <input type="checkbox" id="ignoreTLD">
-        __MSG_ignoreTLD__
+        <span data-i18n="ignoreTLD">Ignore top-level domain (e.g., group example.com and example.org together)</span>
       </label>
     </div>
 
     <div class="option">
       <label>
         <input type="checkbox" id="useDynamicColors">
-        __MSG_useDynamicColors__
+        <span data-i18n="useDynamicColors">Use dynamic colors (automatically assign different colors to different domains)</span>
       </label>
     </div>
   </div>
 
   <div class="section">
-    <div class="section-title">__MSG_excludedDomains__</div>
-    <p>__MSG_excludedDomainsDesc__</p>
+    <div class="section-title" data-i18n="excludedDomains">Excluded Domains</div>
+    <p data-i18n="excludedDomainsDesc">Tabs from these domains will not be automatically grouped:</p>
 
     <div id="domainList" class="domain-list">
-      <div id="noDomains">__MSG_noDomains__</div>
+      <div id="noDomains" data-i18n="noDomains">No excluded domains</div>
     </div>
 
     <div class="domain-input">
-      <input type="text" id="newDomain" placeholder="__MSG_enterDomain__">
-      <button id="addDomain">__MSG_addDomain__</button>
+      <input type="text" id="newDomain" data-i18n-placeholder="enterDomain" placeholder="Enter domain (e.g., example.com)">
+      <button id="addDomain" data-i18n="addDomain">Add Domain</button>
     </div>
   </div>
 
   <div class="section">
-    <div class="section-title">__MSG_colorScheme__</div>
-    <p>__MSG_colorSchemeDesc__</p>
+    <div class="section-title" data-i18n="colorScheme">Color Scheme</div>
+    <p data-i18n="colorSchemeDesc">Customize colors for specific domains:</p>
 
     <div id="colorMappings" class="color-mapping">
       <div class="color-item">
         <input type="text" value="default" disabled>
         <select id="defaultColor">
-          <option value="grey">__MSG_grey__</option>
-          <option value="blue" selected>__MSG_blue__</option>
-          <option value="red">__MSG_red__</option>
-          <option value="yellow">__MSG_yellow__</option>
-          <option value="green">__MSG_green__</option>
-          <option value="pink">__MSG_pink__</option>
-          <option value="purple">__MSG_purple__</option>
-          <option value="cyan">__MSG_cyan__</option>
-          <option value="orange">__MSG_orange__</option>
+          <option value="grey" data-i18n="grey">Grey</option>
+          <option value="blue" selected data-i18n="blue">Blue</option>
+          <option value="red" data-i18n="red">Red</option>
+          <option value="yellow" data-i18n="yellow">Yellow</option>
+          <option value="green" data-i18n="green">Green</option>
+          <option value="pink" data-i18n="pink">Pink</option>
+          <option value="purple" data-i18n="purple">Purple</option>
+          <option value="cyan" data-i18n="cyan">Cyan</option>
+          <option value="orange" data-i18n="orange">Orange</option>
         </select>
       </div>
     </div>
 
-    <button id="addColorMapping" class="add-color-mapping">__MSG_addDomainColor__</button>
+    <button id="addColorMapping" class="add-color-mapping" data-i18n="addDomainColor">Add Domain Color</button>
   </div>
 
-  <button id="saveSettings" class="save-button">__MSG_saveSettings__</button>
+  <button id="saveSettings" class="save-button" data-i18n="saveSettings">Save Settings</button>
 
   <div id="status" class="status"></div>
 

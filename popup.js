@@ -124,17 +124,53 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // 更新插件激活状态文本
+  // 更新插件激活状态文本和指示器
   function updateExtensionActiveStatus(isActive) {
+    const extensionActiveIndicator = document.getElementById('extensionActiveIndicator');
     extensionActiveStatus.textContent = isActive ? '插件已激活' : '插件已停用';
-    extensionActiveStatus.style.color = isActive ? '#0078d7' : '#999';
+    extensionActiveStatus.style.color = isActive ? '#0078d7' : '#666';
+
+    if (extensionActiveIndicator) {
+      extensionActiveIndicator.className = isActive ?
+        'status-indicator status-active' :
+        'status-indicator status-inactive';
+    }
   }
 
-  // 更新监控状态文本
+  // 更新监控状态文本和指示器
   function updateMonitoringStatus(isEnabled) {
+    const monitoringIndicator = document.getElementById('monitoringIndicator');
     monitoringStatus.textContent = isEnabled ? '持续监控已启用' : '持续监控已停用';
-    monitoringStatus.style.color = isEnabled ? '#0078d7' : '#999';
+    monitoringStatus.style.color = isEnabled ? '#0078d7' : '#666';
+
+    if (monitoringIndicator) {
+      monitoringIndicator.className = isEnabled ?
+        'status-indicator status-active' :
+        'status-indicator status-inactive';
+    }
   }
+
+  // 设置标签切换功能
+  const tabButtons = document.querySelectorAll('.tab-button');
+  const tabContents = document.querySelectorAll('.tab-content');
+
+  tabButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      const tabName = button.getAttribute('data-tab');
+
+      // 移除所有标签按钮的active类
+      tabButtons.forEach(btn => btn.classList.remove('active'));
+
+      // 移除所有标签内容的active类
+      tabContents.forEach(content => content.classList.remove('active'));
+
+      // 添加当前标签按钮的active类
+      button.classList.add('active');
+
+      // 添加当前标签内容的active类
+      document.getElementById(`${tabName}-tab`).classList.add('active');
+    });
+  });
 
   // 根据插件状态启用或禁用取消分组按钮
   function updateUngroupButtonState(isActive) {
@@ -386,37 +422,95 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const groupId in metrics) {
           const groupMetrics = metrics[groupId];
 
+          // 创建标签组指标容器
+          const metricsGroup = document.createElement('div');
+          metricsGroup.className = 'metrics-group';
+
           // 创建标签组标题
           const groupTitle = document.createElement('div');
           groupTitle.className = 'metric-group-title';
           groupTitle.style.fontWeight = 'bold';
-          groupTitle.style.marginTop = '10px';
-          groupTitle.style.marginBottom = '5px';
-          groupTitle.style.padding = '3px 5px';
-          groupTitle.style.borderRadius = '3px';
+          groupTitle.style.marginBottom = '10px';
+          groupTitle.style.padding = '5px 8px';
+          groupTitle.style.borderRadius = '4px';
           groupTitle.style.backgroundColor = getGroupColorBackground(groupMetrics.color || 'grey');
           groupTitle.style.color = getGroupColorText(groupMetrics.color || 'grey');
-          groupTitle.textContent = groupMetrics.title || 'Unnamed Group';
-          sortingMetricsElement.appendChild(groupTitle);
+          groupTitle.style.display = 'flex';
+          groupTitle.style.alignItems = 'center';
+
+          // 添加图标
+          const titleIcon = document.createElement('span');
+          titleIcon.style.marginRight = '8px';
+          titleIcon.innerHTML = '&#128196;'; // 文档图标
+          groupTitle.appendChild(titleIcon);
+
+          // 添加标题文本
+          const titleText = document.createElement('span');
+          titleText.textContent = groupMetrics.title || 'Unnamed Group';
+          groupTitle.appendChild(titleText);
+
+          // 添加标签数量
+          if (groupMetrics.size) {
+            const sizeIndicator = document.createElement('span');
+            sizeIndicator.style.marginLeft = 'auto';
+            sizeIndicator.style.backgroundColor = 'rgba(255,255,255,0.3)';
+            sizeIndicator.style.padding = '2px 6px';
+            sizeIndicator.style.borderRadius = '10px';
+            sizeIndicator.style.fontSize = '12px';
+            sizeIndicator.textContent = `${groupMetrics.size} 标签`;
+            groupTitle.appendChild(sizeIndicator);
+          }
+
+          metricsGroup.appendChild(groupTitle);
 
           // 根据排序方法显示相应的指标
           if (sortingMethod === 'smart') {
+            // 创建指标容器
+            const metricsContainer = document.createElement('div');
+            metricsContainer.style.padding = '0 5px';
+
             // 添加智能排序的各项指标
-            addMetricItem(sortingMetricsElement, 'Access Time', groupMetrics.accessTimeFormatted || 'N/A');
-            addMetricItem(sortingMetricsElement, 'Access Score', groupMetrics.accessScore ? groupMetrics.accessScore.toFixed(2) : 'N/A', groupMetrics.accessWeight);
+            addMetricItem(metricsContainer, '最近访问', groupMetrics.accessTimeFormatted || 'N/A', null, '🕒');
+            addMetricItem(metricsContainer, '访问评分', groupMetrics.accessScore ? groupMetrics.accessScore.toFixed(2) : 'N/A', groupMetrics.accessWeight, '📈');
 
-            addMetricItem(sortingMetricsElement, 'Size', groupMetrics.size || 'N/A');
-            addMetricItem(sortingMetricsElement, 'Size Score', groupMetrics.sizeScore ? groupMetrics.sizeScore.toFixed(2) : 'N/A', groupMetrics.sizeWeight);
+            addMetricItem(metricsContainer, '标签数量', groupMetrics.size || 'N/A', null, '📑');
+            addMetricItem(metricsContainer, '大小评分', groupMetrics.sizeScore ? groupMetrics.sizeScore.toFixed(2) : 'N/A', groupMetrics.sizeWeight, '📏');
 
-            addMetricItem(sortingMetricsElement, 'Create Time', groupMetrics.createTimeFormatted || 'N/A');
-            addMetricItem(sortingMetricsElement, 'Create Score', groupMetrics.createScore ? groupMetrics.createScore.toFixed(2) : 'N/A', groupMetrics.createWeight);
+            addMetricItem(metricsContainer, '创建时间', groupMetrics.createTimeFormatted || 'N/A', null, '📅');
+            addMetricItem(metricsContainer, '创建评分', groupMetrics.createScore ? groupMetrics.createScore.toFixed(2) : 'N/A', groupMetrics.createWeight, '🔍');
 
             // 添加最终分数
-            addMetricItem(sortingMetricsElement, 'Final Score', groupMetrics.finalScore ? groupMetrics.finalScore.toFixed(2) : 'N/A');
+            const finalScoreItem = document.createElement('div');
+            finalScoreItem.className = 'metric-item';
+            finalScoreItem.style.marginTop = '10px';
+            finalScoreItem.style.borderTop = '1px dashed #ddd';
+            finalScoreItem.style.paddingTop = '10px';
+
+            const finalScoreName = document.createElement('span');
+            finalScoreName.className = 'metric-name';
+            finalScoreName.innerHTML = '<i>🏆</i> 最终评分';
+
+            const finalScoreValue = document.createElement('span');
+            finalScoreValue.className = 'metric-value metric-score';
+            finalScoreValue.textContent = groupMetrics.finalScore ? groupMetrics.finalScore.toFixed(2) : 'N/A';
+
+            finalScoreItem.appendChild(finalScoreName);
+            finalScoreItem.appendChild(finalScoreValue);
+            metricsContainer.appendChild(finalScoreItem);
+
+            metricsGroup.appendChild(metricsContainer);
           } else {
+            // 创建指标容器
+            const metricsContainer = document.createElement('div');
+            metricsContainer.style.padding = '0 5px';
+
             // 添加排序值
-            addMetricItem(sortingMetricsElement, 'Sort Value', groupMetrics.sortValue || 'N/A');
+            addMetricItem(metricsContainer, '排序值', groupMetrics.sortValue || 'N/A', null, '🔢');
+
+            metricsGroup.appendChild(metricsContainer);
           }
+
+          sortingMetricsElement.appendChild(metricsGroup);
         }
 
         // 显示指标容器
@@ -437,16 +531,32 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // 添加指标项
-  function addMetricItem(container, name, value, weight) {
+  function addMetricItem(container, name, value, weight, icon) {
     const item = document.createElement('div');
     item.className = 'metric-item';
 
     const nameSpan = document.createElement('span');
     nameSpan.className = 'metric-name';
-    nameSpan.textContent = name;
+
+    // 如果提供了图标，添加图标
+    if (icon) {
+      const iconElement = document.createElement('i');
+      iconElement.innerHTML = icon;
+      nameSpan.appendChild(iconElement);
+    }
+
+    // 添加名称文本
+    const nameText = document.createTextNode(name);
+    nameSpan.appendChild(nameText);
 
     const valueSpan = document.createElement('span');
     valueSpan.className = 'metric-value';
+
+    // 如果是评分值，添加特殊样式
+    if (name.toLowerCase().includes('评分') || name.toLowerCase().includes('score')) {
+      valueSpan.classList.add('metric-score');
+    }
+
     valueSpan.textContent = value;
 
     item.appendChild(nameSpan);
@@ -505,25 +615,91 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('添加标签组到列表:', group);
         const groupItem = document.createElement('div');
         groupItem.className = 'group-item';
-        groupItem.style.backgroundColor = getGroupColorBackground(group.color);
-        groupItem.style.color = getGroupColorText(group.color);
 
-        const groupTitle = document.createElement('span');
-        groupTitle.className = 'group-title';
-        groupTitle.textContent = group.title || getMessage('unnamedGroup');
+        // 创建左侧标题区域
+        const titleContainer = document.createElement('div');
+        titleContainer.className = 'group-title';
+
+        // 添加图标
+        const groupIcon = document.createElement('span');
+        groupIcon.className = 'group-icon';
+        groupIcon.style.color = getGroupColorText(group.color);
+        groupIcon.innerHTML = '&#128196;'; // 文档图标
+        titleContainer.appendChild(groupIcon);
+
+        // 添加标题文本
+        const titleText = document.createElement('span');
+        titleText.textContent = group.title || getMessage('unnamedGroup');
         if (!group.title) {
-          groupTitle.setAttribute('data-i18n', 'unnamedGroup');
+          titleText.setAttribute('data-i18n', 'unnamedGroup');
         }
+        titleContainer.appendChild(titleText);
 
+        // 创建右侧区域
+        const rightContainer = document.createElement('div');
+        rightContainer.style.display = 'flex';
+        rightContainer.style.alignItems = 'center';
+        rightContainer.style.gap = '10px';
+
+        // 添加标签数量
         const groupCount = document.createElement('span');
         groupCount.className = 'group-count';
         groupCount.textContent = groupTabCounts[group.id] || 0;
+        rightContainer.appendChild(groupCount);
 
-        groupItem.appendChild(groupTitle);
-        groupItem.appendChild(groupCount);
+        // 添加操作按钮
+        const actionsContainer = document.createElement('div');
+        actionsContainer.className = 'group-actions';
+
+        // 添加排序按钮
+        const sortButton = document.createElement('button');
+        sortButton.className = 'group-action-button';
+        sortButton.title = '排序此组内的标签';
+        sortButton.innerHTML = '&#128260;'; // 排序图标
+        sortButton.addEventListener('click', (e) => {
+          e.stopPropagation(); // 阻止事件冒泡
+          sortTabGroup(group.id);
+        });
+        actionsContainer.appendChild(sortButton);
+
+        rightContainer.appendChild(actionsContainer);
+
+        // 添加到组项
+        groupItem.appendChild(titleContainer);
+        groupItem.appendChild(rightContainer);
+
+        // 设置组项的边框颜色
+        groupItem.style.borderLeft = `4px solid ${getGroupColorBackground(group.color)}`;
+
+        // 添加点击事件
+        groupItem.addEventListener('click', () => {
+          // 可以添加点击组时的操作，例如聚焦到该组
+          console.log('点击了标签组:', group.title);
+        });
 
         groupListElement.appendChild(groupItem);
       });
+
+      // 辅助函数：排序特定标签组
+      async function sortTabGroup(groupId) {
+        try {
+          showStatus('正在排序标签组...', 'info');
+          const response = await chrome.runtime.sendMessage({
+            action: 'sortTabGroup',
+            groupId: groupId
+          });
+
+          if (response && response.success) {
+            showStatus('标签组排序完成', 'success');
+            loadTabGroups(); // 重新加载标签组列表
+          } else {
+            showStatus('标签组排序失败', 'error');
+          }
+        } catch (error) {
+          console.error('排序标签组失败:', error);
+          showStatus('标签组排序失败: ' + error.message, 'error');
+        }
+      }
     } catch (error) {
       console.error('加载标签组失败:', error);
       showStatus(getMessage('errorLoadingGroups'), 'error');

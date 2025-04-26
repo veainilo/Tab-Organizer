@@ -6,40 +6,114 @@
   <style>
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      width: 300px;
-      padding: 10px;
+      width: 400px;
+      padding: 15px;
+      margin: 0;
+      background-color: #f8f9fa;
+      color: #333;
     }
 
     h1 {
-      font-size: 18px;
+      font-size: 22px;
       color: #0078d7;
       margin-top: 0;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #e1e1e1;
+      text-align: center;
+    }
+
+    h2 {
+      font-size: 18px;
+      color: #0078d7;
+      margin-top: 15px;
+      margin-bottom: 10px;
+    }
+
+    .section {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      padding: 15px;
+      margin-bottom: 15px;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+      margin-top: 0;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+    }
+
+    .section-title i {
+      margin-right: 8px;
+      color: #0078d7;
     }
 
     .button-container {
       display: flex;
-      flex-direction: column;
+      flex-wrap: wrap;
       gap: 10px;
       margin-bottom: 15px;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .button-col-2 {
+      flex: 1;
     }
 
     button {
       background-color: #0078d7;
       color: white;
       border: none;
-      padding: 8px 12px;
-      border-radius: 4px;
+      padding: 10px 12px;
+      border-radius: 6px;
       cursor: pointer;
       font-size: 14px;
-      transition: background-color 0.2s;
+      transition: all 0.2s;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    button i {
+      margin-right: 6px;
     }
 
     button:hover {
       background-color: #005a9e;
+      transform: translateY(-1px);
+      box-shadow: 0 3px 5px rgba(0,0,0,0.15);
     }
 
     button:active {
       background-color: #004578;
+      transform: translateY(1px);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+
+    .button-secondary {
+      background-color: #f0f0f0;
+      color: #333;
+      border: 1px solid #ddd;
+    }
+
+    .button-secondary:hover {
+      background-color: #e0e0e0;
+    }
+
+    .button-secondary:active {
+      background-color: #d0d0d0;
     }
 
     .settings-link {
@@ -75,116 +149,296 @@
 
     .group-list {
       margin-top: 15px;
-      max-height: 200px;
+      max-height: 250px;
       overflow-y: auto;
-      border: 1px solid #e1e1e1;
-      border-radius: 4px;
-      padding: 5px;
+      border-radius: 8px;
+      padding: 0;
+      background-color: white;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 
     .group-item {
-      padding: 5px;
-      margin-bottom: 5px;
-      border-radius: 3px;
+      padding: 12px 15px;
+      border-bottom: 1px solid #eaeaea;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      transition: background-color 0.2s;
+    }
+
+    .group-item:last-child {
+      border-bottom: none;
+    }
+
+    .group-item:hover {
+      background-color: #f5f9ff;
     }
 
     .group-title {
-      font-weight: bold;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+    }
+
+    .group-icon {
+      margin-right: 8px;
+      font-size: 16px;
     }
 
     .group-count {
       background-color: #f0f0f0;
-      padding: 2px 6px;
-      border-radius: 10px;
+      padding: 3px 8px;
+      border-radius: 12px;
       font-size: 12px;
+      font-weight: 600;
+      color: #555;
+    }
+
+    .group-actions {
+      display: flex;
+      gap: 5px;
+    }
+
+    .group-action-button {
+      background: none;
+      border: none;
+      color: #666;
+      cursor: pointer;
+      padding: 3px;
+      border-radius: 3px;
+      transition: all 0.2s;
+      width: auto;
+      box-shadow: none;
+    }
+
+    .group-action-button:hover {
+      background-color: #e9e9e9;
+      color: #333;
+      transform: none;
+      box-shadow: none;
     }
 
     .sorting-metrics-container {
       margin-top: 15px;
-      border: 1px solid #e1e1e1;
-      border-radius: 4px;
-      padding: 10px;
-      background-color: #f9f9f9;
+      border-radius: 8px;
+      padding: 15px;
+      background-color: white;
       max-height: 300px;
       overflow-y: auto;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 
     .metrics-title {
       font-size: 16px;
       margin-top: 0;
-      margin-bottom: 10px;
+      margin-bottom: 15px;
       color: #0078d7;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #eaeaea;
+      display: flex;
+      align-items: center;
+    }
+
+    .metrics-title i {
+      margin-right: 8px;
     }
 
     .sorting-metrics {
       font-size: 13px;
-      line-height: 1.4;
+      line-height: 1.5;
       margin-bottom: 10px;
+    }
+
+    .metrics-group {
+      background-color: #f8f9fa;
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 12px;
     }
 
     .metric-item {
       display: flex;
       justify-content: space-between;
-      margin-bottom: 5px;
-      padding-bottom: 5px;
-      border-bottom: 1px solid #e1e1e1;
+      margin-bottom: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #eaeaea;
     }
 
     .metric-item:last-child {
       border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
     }
 
     .metric-name {
       font-weight: 500;
+      color: #555;
+      display: flex;
+      align-items: center;
+    }
+
+    .metric-name i {
+      margin-right: 5px;
+      font-size: 14px;
+      color: #0078d7;
     }
 
     .metric-value {
-      font-family: monospace;
+      font-family: 'Consolas', monospace;
+      background-color: #f5f5f5;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #333;
+    }
+
+    .metric-score {
+      font-weight: 600;
+      color: #0078d7;
     }
 
     .metric-bar-container {
-      height: 6px;
-      background-color: #e1e1e1;
-      border-radius: 3px;
-      margin-top: 3px;
+      height: 8px;
+      background-color: #e9ecef;
+      border-radius: 4px;
+      margin-top: 5px;
       overflow: hidden;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
     }
 
     .metric-bar {
       height: 100%;
       background-color: #0078d7;
+      background-image: linear-gradient(45deg, rgba(255,255,255,.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,.15) 50%, rgba(255,255,255,.15) 75%, transparent 75%, transparent);
+      background-size: 1rem 1rem;
+    }
+
+    .status {
+      margin: 10px 0;
+      padding: 12px 15px;
+      border-radius: 6px;
+      font-size: 14px;
+      display: none;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      text-align: center;
+      font-weight: 500;
+    }
+
+    .info {
+      background-color: #e3f2fd;
+      color: #0d47a1;
+      border-left: 4px solid #2196f3;
     }
 
     .toggle-button {
       width: 100%;
       margin-top: 5px;
-      background-color: #f0f0f0;
+      background-color: #f5f5f5;
       color: #333;
-      border: 1px solid #ccc;
+      border: 1px solid #ddd;
+      font-size: 13px;
+      padding: 8px;
     }
 
     .toggle-button:hover {
-      background-color: #e0e0e0;
+      background-color: #e9e9e9;
     }
 
-    .show-metrics-button {
-      margin-top: 10px;
-      font-size: 12px;
-      text-align: center;
-      color: #0078d7;
+    .tab-container {
+      margin-top: 15px;
+    }
+
+    .tab-buttons {
+      display: flex;
+      border-bottom: 1px solid #ddd;
+      margin-bottom: 15px;
+    }
+
+    .tab-button {
+      padding: 8px 15px;
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      color: #666;
       cursor: pointer;
-      text-decoration: underline;
+      font-weight: 500;
+      transition: all 0.2s;
+      width: auto;
+      box-shadow: none;
+    }
+
+    .tab-button.active {
+      color: #0078d7;
+      border-bottom-color: #0078d7;
+    }
+
+    .tab-button:hover {
+      background-color: #f5f5f5;
+      color: #333;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .settings-link {
+      display: block;
+      text-align: center;
+      margin-top: 15px;
+      margin-bottom: 5px;
+      color: #0078d7;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      padding: 8px;
+      border-radius: 6px;
+      transition: background-color 0.2s;
+    }
+
+    .settings-link:hover {
+      background-color: #f0f7ff;
+      text-decoration: none;
+    }
+
+    /* 开关容器 */
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      padding: 10px;
+      background-color: white;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+
+    .toggle-info {
+      flex: 1;
+      margin-left: 10px;
+    }
+
+    .toggle-title {
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .toggle-description {
+      font-size: 12px;
+      color: #666;
     }
 
     /* 开关样式 */
     .switch {
       position: relative;
       display: inline-block;
-      width: 40px;
-      height: 20px;
+      width: 46px;
+      height: 24px;
+      flex-shrink: 0;
     }
 
     .switch input {
@@ -201,18 +455,20 @@
       right: 0;
       bottom: 0;
       background-color: #ccc;
-      transition: .4s;
+      transition: .3s;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
     }
 
     .slider:before {
       position: absolute;
       content: "";
-      height: 16px;
-      width: 16px;
-      left: 2px;
-      bottom: 2px;
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
       background-color: white;
-      transition: .4s;
+      transition: .3s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
     }
 
     input:checked + .slider {
@@ -224,67 +480,142 @@
     }
 
     input:checked + .slider:before {
-      transform: translateX(20px);
+      transform: translateX(22px);
     }
 
     .slider.round {
-      border-radius: 20px;
+      border-radius: 24px;
     }
 
     .slider.round:before {
       border-radius: 50%;
+    }
+
+    /* 状态指示器 */
+    .status-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 6px;
+    }
+
+    .status-active {
+      background-color: #4caf50;
+    }
+
+    .status-inactive {
+      background-color: #f44336;
     }
   </style>
 </head>
 <body>
   <h1 data-i18n="extName">Edge Tab Organizer</h1>
 
-  <!-- 插件激活开关 -->
-  <div style="display: flex; align-items: center; margin-bottom: 10px;">
-    <label class="switch" style="margin-right: 10px;">
-      <input type="checkbox" id="extensionActiveToggle" checked>
-      <span class="slider round"></span>
-    </label>
-    <span id="extensionActiveStatus" style="font-weight: bold; color: #0078d7;">插件已激活</span>
+  <div class="section">
+    <!-- 插件激活开关 -->
+    <div class="toggle-container">
+      <label class="switch">
+        <input type="checkbox" id="extensionActiveToggle" checked>
+        <span class="slider round"></span>
+      </label>
+      <div class="toggle-info">
+        <div class="toggle-title">
+          <span class="status-indicator status-active" id="extensionActiveIndicator"></span>
+          <span id="extensionActiveStatus">插件已激活</span>
+        </div>
+        <div class="toggle-description">启用或禁用标签页自动分组功能</div>
+      </div>
+    </div>
+
+    <!-- 持续监控开关 -->
+    <div class="toggle-container">
+      <label class="switch">
+        <input type="checkbox" id="monitoringToggle" checked>
+        <span class="slider round"></span>
+      </label>
+      <div class="toggle-info">
+        <div class="toggle-title">
+          <span class="status-indicator status-active" id="monitoringIndicator"></span>
+          <span id="monitoringStatus">持续监控已启用</span>
+        </div>
+        <div class="toggle-description">自动监控标签页状态并进行分组和排序</div>
+      </div>
+    </div>
   </div>
 
-  <!-- 持续监控开关 -->
-  <div style="display: flex; align-items: center; margin-bottom: 10px;">
-    <label class="switch" style="margin-right: 10px;">
-      <input type="checkbox" id="monitoringToggle" checked>
-      <span class="slider round"></span>
-    </label>
-    <span id="monitoringStatus" style="font-weight: bold; color: #0078d7;">持续监控已启用</span>
-  </div>
-
-  <div class="button-container">
-    <button id="groupByDomain" data-i18n="groupByDomain">Group Tabs by Domain</button>
-    <button id="ungroupAll" data-i18n="ungroupAll">Ungroup All Tabs</button>
-    <button id="sortTabs" data-i18n="sortTabs">Sort Tabs in Groups</button>
-    <button id="sortGroups" data-i18n="sortGroups">Sort Tab Groups</button>
-  </div>
-
-  <!-- 调试按钮 -->
-  <div class="button-container" style="margin-top: 10px; border-top: 1px solid #ccc; padding-top: 10px;">
-    <button id="testConnection" style="background-color: #5a5a5a;">测试连接</button>
-    <button id="testGroupByDomain" style="background-color: #5a5a5a;">测试分组</button>
-    <button id="testUngroupAll" style="background-color: #5a5a5a;">测试取消分组</button>
-    <button id="testSortTabGroups" style="background-color: #5a5a5a;">测试排序</button>
-    <button id="testGetSortingMetrics" style="background-color: #5a5a5a;">测试获取指标</button>
+  <div class="section">
+    <h3 class="section-title">
+      <i>⚡</i>快速操作
+    </h3>
+    <div class="button-container">
+      <div class="button-row">
+        <div class="button-col-2">
+          <button id="groupByDomain" data-i18n="groupByDomain">
+            <i>📊</i>按域名分组
+          </button>
+        </div>
+        <div class="button-col-2">
+          <button id="ungroupAll" data-i18n="ungroupAll">
+            <i>🔄</i>取消所有分组
+          </button>
+        </div>
+      </div>
+      <div class="button-row">
+        <div class="button-col-2">
+          <button id="sortTabs" data-i18n="sortTabs">
+            <i>📋</i>组内标签排序
+          </button>
+        </div>
+        <div class="button-col-2">
+          <button id="sortGroups" data-i18n="sortGroups">
+            <i>📑</i>标签组排序
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div id="status" class="status"></div>
 
-  <div id="groupList" class="group-list">
-    <div id="noGroups" data-i18n="noGroups">No tab groups found</div>
+  <div class="tab-container">
+    <div class="tab-buttons">
+      <button class="tab-button active" data-tab="groups">当前标签组</button>
+      <button class="tab-button" data-tab="metrics">排序指标</button>
+      <button class="tab-button" data-tab="debug">调试</button>
+    </div>
+
+    <div class="tab-content active" id="groups-tab">
+      <div id="groupList" class="group-list">
+        <div id="noGroups" data-i18n="noGroups" style="padding: 15px; text-align: center; color: #666;">No tab groups found</div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="metrics-tab">
+      <div id="sortingMetricsContainer" class="sorting-metrics-container">
+        <h3 class="metrics-title">
+          <i>📊</i>
+          <span data-i18n="sortingMetrics">排序指标</span>
+        </h3>
+        <div id="sortingMetrics" class="sorting-metrics"></div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="debug-tab">
+      <!-- 调试按钮 -->
+      <div class="button-container">
+        <button id="testConnection" class="button-secondary">测试连接</button>
+        <button id="testGroupByDomain" class="button-secondary">测试分组</button>
+        <button id="testUngroupAll" class="button-secondary">测试取消分组</button>
+        <button id="testSortTabGroups" class="button-secondary">测试排序</button>
+        <button id="testGetSortingMetrics" class="button-secondary">测试获取指标</button>
+      </div>
+    </div>
   </div>
 
-  <div id="sortingMetricsContainer" class="sorting-metrics-container" style="display: block;">
-    <h2 class="metrics-title" data-i18n="sortingMetrics">Sorting Metrics</h2>
-    <div id="sortingMetrics" class="sorting-metrics"></div>
-  </div>
-
-  <a href="options.html" class="settings-link" target="_blank" data-i18n="settings">Settings</a>
+  <a href="options.html" class="settings-link" target="_blank" data-i18n="settings">
+    ⚙️ 设置
+  </a>
 
   <script src="popup.js"></script>
   <script src="test.js"></script>

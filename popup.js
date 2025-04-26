@@ -447,6 +447,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 3000);
   }
 
+  // Function to show error message in container
+  function showErrorInContainer(container, errorMessage, error) {
+    console.error(errorMessage, error);
+
+    // 清空容器
+    while (container.firstChild) {
+      container.removeChild(container.firstChild);
+    }
+
+    const errorMsg = document.createElement('div');
+    errorMsg.className = 'error-message';
+    errorMsg.style.padding = '10px';
+    errorMsg.style.color = '#e74c3c';
+    errorMsg.style.backgroundColor = '#fdeaea';
+    errorMsg.style.borderRadius = '4px';
+    errorMsg.style.margin = '10px 0';
+    errorMsg.textContent = errorMessage + ': ' + (error.message || '未知错误');
+    container.appendChild(errorMsg);
+  }
+
   // 加载并显示排序指标数据
   function loadSortingMetrics() {
     console.log('loadSortingMetrics function called');
@@ -472,28 +492,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 检查是否有运行时错误
         if (chrome.runtime.lastError) {
-          console.error('发送 getSortingMetrics 消息失败:', chrome.runtime.lastError);
-          const errorMsg = document.createElement('div');
-          errorMsg.textContent = 'Error: ' + (chrome.runtime.lastError.message || 'Unknown error');
-          sortingMetricsElement.appendChild(errorMsg);
+          showErrorInContainer(sortingMetricsElement, '发送 getSortingMetrics 消息失败', chrome.runtime.lastError);
           return;
         }
 
         // 检查响应是否存在
         if (!response) {
-          console.error('No response received from getSortingMetrics');
-          const errorMsg = document.createElement('div');
-          errorMsg.textContent = 'Error: No response from background script';
-          sortingMetricsElement.appendChild(errorMsg);
+          const error = new Error('No response from background script');
+          showErrorInContainer(sortingMetricsElement, '未收到后台脚本响应', error);
           return;
         }
 
         // 检查响应是否成功
         if (!response.success) {
-          console.error('Error loading sorting metrics:', response.error || 'Unknown error');
-          const errorMsg = document.createElement('div');
-          errorMsg.textContent = 'Error: ' + (response.error || 'Unknown error');
-          sortingMetricsElement.appendChild(errorMsg);
+          const error = new Error(response.error || 'Unknown error');
+          showErrorInContainer(sortingMetricsElement, '加载排序指标失败', error);
           return;
         }
 
@@ -635,16 +648,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sortingMetricsContainer.style.display = 'block';
       });
     } catch (error) {
-      console.error('发送 getSortingMetrics 消息时出错:', error);
-
-      // 清空指标容器
-      while (sortingMetricsElement.firstChild) {
-        sortingMetricsElement.removeChild(sortingMetricsElement.firstChild);
-      }
-
-      const errorMsg = document.createElement('div');
-      errorMsg.textContent = 'Error: ' + (error.message || 'Unknown error');
-      sortingMetricsElement.appendChild(errorMsg);
+      showErrorInContainer(sortingMetricsElement, '发送 getSortingMetrics 消息时出错', error);
     }
   }
 
@@ -712,13 +716,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
 
-      // Get all tab groups in the current window
-      const groups = await chrome.tabGroups.query({ windowId: WINDOW_ID_CURRENT });
-      console.log('查询到的标签组:', groups);
-
-      // Clear the group list
+      // 清空组列表，以防出错时显示旧数据
       while (groupListElement.firstChild) {
         groupListElement.removeChild(groupListElement.firstChild);
+      }
+
+      // Get all tab groups in the current window
+      let groups = [];
+      try {
+        groups = await chrome.tabGroups.query({ windowId: WINDOW_ID_CURRENT });
+        console.log('查询到的标签组:', groups);
+      } catch (error) {
+        showErrorInContainer(groupListElement, '加载标签页组时出错', error);
+        return;
       }
 
       if (!groups || groups.length === 0) {
@@ -728,8 +738,14 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       // Get all tabs to count tabs in each group and determine their order
-      const tabs = await chrome.tabs.query({ currentWindow: true });
-      console.log('查询到的标签页:', tabs);
+      let tabs = [];
+      try {
+        tabs = await chrome.tabs.query({ currentWindow: true });
+        console.log('查询到的标签页:', tabs);
+      } catch (error) {
+        showErrorInContainer(groupListElement, '加载标签页时出错', error);
+        return;
+      }
 
       // Create a map of group IDs to tab counts
       const groupTabCounts = {};

@@ -80,16 +80,48 @@ async function sortTabsInGroup(groupId) {
 
     console.log('标签的新位置:', newPositions);
 
-    // 按照新的顺序移动标签
-    for (let i = 0; i < sortedTabs.length; i++) {
-      try {
-        const tabId = sortedTabs[i].id;
-        const newIndex = newPositions[tabId];
+    // 创建当前标签位置的映射
+    const currentPositions = {};
+    currentTabs.forEach(tab => {
+      currentPositions[tab.id] = tab.index;
+    });
 
-        console.log(`移动标签 ${tabId} (${sortedTabs[i].title}) 到索引 ${newIndex}`);
-        await chrome.tabs.move(tabId, { index: newIndex });
+    // 找出需要移动的标签（当前位置与目标位置不同的标签）
+    const tabsToMove = [];
+    for (let i = 0; i < sortedTabs.length; i++) {
+      const tabId = sortedTabs[i].id;
+      const currentIndex = currentPositions[tabId];
+      const newIndex = newPositions[tabId];
+
+      // 如果当前位置与目标位置不同，则需要移动
+      if (currentIndex !== newIndex) {
+        tabsToMove.push({
+          id: tabId,
+          title: sortedTabs[i].title,
+          currentIndex: currentIndex,
+          newIndex: newIndex
+        });
+      }
+    }
+
+    console.log(`需要移动的标签数量: ${tabsToMove.length}/${sortedTabs.length}`);
+
+    // 如果没有标签需要移动，直接返回
+    if (tabsToMove.length === 0) {
+      console.log('所有标签已经在正确的位置，无需移动');
+      return true;
+    }
+
+    // 按照新的顺序移动标签（只移动需要调整的标签）
+    // 从后向前移动，避免移动过程中索引变化导致的问题
+    tabsToMove.sort((a, b) => b.newIndex - a.newIndex);
+
+    for (const tabToMove of tabsToMove) {
+      try {
+        console.log(`移动标签 ${tabToMove.id} (${tabToMove.title}) 从索引 ${tabToMove.currentIndex} 到索引 ${tabToMove.newIndex}`);
+        await chrome.tabs.move(tabToMove.id, { index: tabToMove.newIndex });
       } catch (error) {
-        console.error(`移动标签页 ${sortedTabs[i].id} 失败:`, error);
+        console.error(`移动标签页 ${tabToMove.id} 失败:`, error);
       }
     }
 

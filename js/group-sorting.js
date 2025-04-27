@@ -103,6 +103,60 @@ async function sortTabGroups() {
       }
     }
 
+    // 检查标签组是否需要重新排序
+    // 首先，获取当前标签组的顺序
+    const currentGroupOrder = {};
+    groups.forEach((group, index) => {
+      currentGroupOrder[group.id] = index;
+    });
+
+    // 检查当前顺序是否与目标顺序相同
+    let needsReordering = false;
+    for (let i = 0; i < sortedGroups.length; i++) {
+      if (sortedGroups[i].id !== groups[i].id) {
+        needsReordering = true;
+        break;
+      }
+    }
+
+    // 如果顺序已经正确，无需重新排序
+    if (!needsReordering) {
+      console.log('标签组已经按照正确的顺序排列，无需重新排序');
+      return true;
+    }
+
+    console.log('标签组需要重新排序');
+
+    // 尝试使用更高效的方法重新排序标签组
+    // 检查是否支持移动标签组的API
+    if (chrome.tabGroups && chrome.tabGroups.move) {
+      try {
+        console.log('尝试使用tabGroups.move API直接移动标签组');
+
+        // 从后向前移动标签组，避免索引变化导致的问题
+        for (let i = sortedGroups.length - 1; i >= 0; i--) {
+          const group = sortedGroups[i];
+          const targetIndex = i;
+          const currentIndex = currentGroupOrder[group.id];
+
+          // 只移动位置不正确的标签组
+          if (currentIndex !== targetIndex) {
+            console.log(`移动标签组 "${group.title || '未命名'}" 从位置 ${currentIndex} 到位置 ${targetIndex}`);
+            await chrome.tabGroups.move(group.id, { index: targetIndex });
+          }
+        }
+
+        console.log('标签组排序完成（使用直接移动方法）');
+        return true;
+      } catch (error) {
+        console.error('使用tabGroups.move API失败，回退到传统方法:', error);
+        // 如果直接移动失败，回退到传统方法
+      }
+    }
+
+    // 传统方法：取消分组并重新创建
+    console.log('使用传统方法重新排序标签组');
+
     // 临时取消所有标签页的分组
     console.log('临时取消所有标签页的分组');
     const groupedTabIds = allTabs
@@ -113,13 +167,43 @@ async function sortTabGroups() {
       await chrome.tabs.ungroup(groupedTabIds);
     }
 
-    // 移动所有标签页到新位置
-    console.log('移动所有标签页到新位置');
+    // 找出需要移动的标签（当前位置与目标位置不同的标签）
+    const tabsToMove = [];
     for (const tabId in tabPositions) {
-      try {
-        await chrome.tabs.move(parseInt(tabId), { index: tabPositions[tabId] });
-      } catch (error) {
-        console.error(`移动标签页 ${tabId} 失败:`, error);
+      const tab = allTabs.find(t => t.id === parseInt(tabId));
+      if (tab) {
+        const currentIndex = tab.index;
+        const newIndex = tabPositions[tabId];
+
+        // 如果当前位置与目标位置不同，则需要移动
+        if (currentIndex !== newIndex) {
+          tabsToMove.push({
+            id: parseInt(tabId),
+            currentIndex: currentIndex,
+            newIndex: newIndex
+          });
+        }
+      }
+    }
+
+    console.log(`需要移动的标签数量: ${tabsToMove.length}/${Object.keys(tabPositions).length}`);
+
+    // 如果没有标签需要移动，但标签组顺序不正确，可能是因为标签组内的标签顺序正确，但标签组顺序不正确
+    // 在这种情况下，我们仍然需要重新创建标签组
+    if (tabsToMove.length === 0) {
+      console.log('标签位置正确，但标签组顺序不正确，只需重新创建标签组');
+    } else {
+      // 按照新的顺序移动标签（只移动需要调整的标签）
+      // 从后向前移动，避免移动过程中索引变化导致的问题
+      tabsToMove.sort((a, b) => b.newIndex - a.newIndex);
+
+      for (const tabToMove of tabsToMove) {
+        try {
+          console.log(`移动标签 ${tabToMove.id} 从索引 ${tabToMove.currentIndex} 到索引 ${tabToMove.newIndex}`);
+          await chrome.tabs.move(tabToMove.id, { index: tabToMove.newIndex });
+        } catch (error) {
+          console.error(`移动标签页 ${tabToMove.id} 失败:`, error);
+        }
       }
     }
 

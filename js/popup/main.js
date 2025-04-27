@@ -19,17 +19,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const noGroupsElement = document.getElementById('noGroups');
   const sortingMetricsElement = document.getElementById('sortingMetrics');
   const sortingMetricsContainer = document.getElementById('sortingMetricsContainer');
-  
+
   // 获取按钮元素
   const groupByDomainButton = document.getElementById('groupByDomain');
   const ungroupAllButton = document.getElementById('ungroupAll');
   const sortTabGroupsButton = document.getElementById('sortTabGroups');
   const sortTabsButton = document.getElementById('sortTabs');
-  
+
   // 获取标签页切换元素
-  const tabButtons = document.querySelectorAll('.tab-button');
+  const tabButtons = document.querySelectorAll('.nav-item');
   const tabContents = document.querySelectorAll('.tab-content');
-  
+
   // 获取设置元素
   const extensionActiveToggle = document.getElementById('extensionActiveToggle');
   const extensionActiveStatus = document.getElementById('extensionActiveStatus');
@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const monitoringStatus = document.getElementById('monitoringStatus');
   const monitoringInterval = document.getElementById('monitoringInterval');
   const monitoringCountdown = document.getElementById('monitoringCountdown');
-  
+
   // 获取排序设置元素
   const groupSortingMethod = document.getElementById('groupSortingMethod');
   const groupSortOrder = document.getElementById('groupSortOrder');
@@ -47,14 +47,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const tabSortOrder = document.getElementById('tabSortOrder');
   const tabSortOrderIcon = document.getElementById('tabSortOrderIcon');
   const tabSortOrderText = document.getElementById('tabSortOrderText');
-  
+
   // 初始化监控 UI
   initMonitoringUI(
     extensionActiveToggle, extensionActiveStatus,
     monitoringToggle, monitoringStatus,
     monitoringInterval, monitoringCountdown
   );
-  
+
   // 初始化排序设置
   initSortingSettings(
     groupSortingMethod, groupSortOrder, groupSortOrderIcon, groupSortOrderText,
@@ -72,11 +72,14 @@ document.addEventListener('DOMContentLoaded', () => {
       // 移除所有标签页的激活状态
       tabButtons.forEach(btn => btn.classList.remove('active'));
       tabContents.forEach(content => content.classList.remove('active'));
-      
+
       // 激活当前标签页
       button.classList.add('active');
       const tabId = button.getAttribute('data-tab');
-      document.getElementById(tabId).classList.add('active');
+      const tabContent = document.getElementById(tabId + '-tab');
+      if (tabContent) {
+        tabContent.classList.add('active');
+      }
     });
   });
 
@@ -84,22 +87,22 @@ document.addEventListener('DOMContentLoaded', () => {
   groupByDomainButton.addEventListener('click', () => {
     console.log('按域名分组按钮被点击');
     showStatus(getMessage('groupingTabs'), 'info');
-    
+
     chrome.runtime.sendMessage({ action: 'groupByDomain' }, (response) => {
       console.log('groupByDomain 响应:', response);
-      
+
       if (response && response.success) {
         // 监听分组完成消息
         chrome.runtime.onMessage.addListener(function listener(message) {
           if (message.action === 'groupByDomainComplete') {
             chrome.runtime.onMessage.removeListener(listener);
-            
+
             if (message.success) {
               showStatus(getMessage('tabsGrouped'), 'success');
             } else {
               showStatus(getMessage('errorGroupingTabs', [message.error || 'Unknown error']), 'error');
             }
-            
+
             // 重新加载标签组列表
             loadTabGroups(groupListElement, noGroupsElement);
           }
@@ -114,10 +117,10 @@ document.addEventListener('DOMContentLoaded', () => {
   ungroupAllButton.addEventListener('click', () => {
     console.log('取消所有分组按钮被点击');
     showStatus(getMessage('ungroupingTabs'), 'info');
-    
+
     chrome.runtime.sendMessage({ action: 'ungroupAll' }, (response) => {
       console.log('ungroupAll 响应:', response);
-      
+
       if (response && response.success) {
         showStatus(getMessage('tabsUngrouped'), 'success');
         // 重新加载标签组列表
@@ -132,10 +135,10 @@ document.addEventListener('DOMContentLoaded', () => {
   sortTabGroupsButton.addEventListener('click', () => {
     console.log('标签组排序按钮被点击');
     showStatus(getMessage('sortingGroups'), 'info');
-    
+
     chrome.runtime.sendMessage({ action: 'sortTabGroups' }, (response) => {
       console.log('sortTabGroups 响应:', response);
-      
+
       if (response && response.success) {
         showStatus(getMessage('groupsSorted'), 'success');
         // 重新加载标签组列表
@@ -176,7 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 获取当前的排序方法和顺序
         const sortMethod = tabSortingMethod.options[tabSortingMethod.selectedIndex].text;
         const sortOrder = tabSortOrderText.textContent;
-        
+
         showStatus(`所有标签组内的标签已按${sortMethod}${sortOrder}排序`, 'success');
         loadTabGroups(groupListElement, noGroupsElement);
         loadSortingMetrics(sortingMetricsElement, sortingMetricsContainer);
@@ -198,7 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // 监听后台消息
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log('Popup received message:', message);
-  
+
   // 处理消息
   if (message.action === 'groupByDomainComplete') {
     // 分组完成，重新加载标签组列表
@@ -206,7 +209,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const noGroupsElement = document.getElementById('noGroups');
     loadTabGroups(groupListElement, noGroupsElement);
   }
-  
+
   // 返回 true 表示异步处理
   return true;
 });

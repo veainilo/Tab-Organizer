@@ -82,99 +82,112 @@
 
   <div id="status" class="status"></div>
 
-  <div class="tab-container">
-    <div class="tab-buttons">
-      <button class="tab-button active" data-tab="groups">
-        <span class="tab-icon">📑</span>
-        <span class="tab-label">当前标签组</span>
-      </button>
-      <button class="tab-button" data-tab="metrics">
-        <span class="tab-icon">📊</span>
-        <span class="tab-label">排序指标</span>
-      </button>
-      <button class="tab-button" data-tab="debug">
-        <span class="tab-icon">🔧</span>
-        <span class="tab-label">调试</span>
-      </button>
-    </div>
-
-    <div class="tab-content active" id="groups-tab">
-      <div id="groupList" class="group-list">
-        <div id="noGroups" style="padding: 20px; text-align: center; color: #666;">
-          <div style="font-size: 24px; margin-bottom: 10px;">📂</div>
-          <div>暂无标签组</div>
-        </div>
+  <div class="vertical-layout">
+    <div class="sidebar">
+      <div class="tab-nav">
+        <button class="nav-item active" data-tab="groups">
+          <span class="nav-icon">📑</span>
+          <span class="nav-label">当前标签组</span>
+        </button>
+        <button class="nav-item" data-tab="metrics">
+          <span class="nav-icon">📊</span>
+          <span class="nav-label">排序指标</span>
+        </button>
+        <button class="nav-item" data-tab="debug">
+          <span class="nav-icon">🔧</span>
+          <span class="nav-label">调试</span>
+        </button>
       </div>
     </div>
 
-    <div class="tab-content" id="metrics-tab">
-      <div class="card">
-        <div class="card-header">
-          <div class="card-icon">⚙️</div>
-          <div class="card-title">排序设置</div>
+    <div class="content-area">
+      <div class="tab-content active" id="groups-tab">
+        <div class="content-header">
+          <h3 class="content-title">当前标签组</h3>
         </div>
-        <div class="card-body">
-          <div class="sorting-settings">
-            <div class="sorting-section">
-              <h4>标签组排序</h4>
-              <div class="sorting-option">
-                <label>排序方法:</label>
-                <select id="groupSortingMethod" class="select-control">
-                  <option value="title">按标题</option>
-                  <option value="size">按大小</option>
-                  <option value="smart" selected>智能排序</option>
-                </select>
-              </div>
-              <div class="sorting-option">
-                <label>排序顺序:</label>
-                <button id="groupSortOrder" class="sort-order-button">
-                  <span id="groupSortOrderIcon">↑</span>
-                  <span id="groupSortOrderText">升序</span>
-                </button>
-              </div>
-            </div>
-
-            <div class="sorting-section">
-              <h4>组内标签排序</h4>
-              <div class="sorting-option">
-                <label>排序方法:</label>
-                <select id="tabSortingMethod" class="select-control">
-                  <option value="title">按标题</option>
-                  <option value="domain" selected>按域名</option>
-                  <option value="smart">智能排序</option>
-                </select>
-              </div>
-              <div class="sorting-option">
-                <label>排序顺序:</label>
-                <button id="tabSortOrder" class="sort-order-button">
-                  <span id="tabSortOrderIcon">↑</span>
-                  <span id="tabSortOrderText">升序</span>
-                </button>
-              </div>
-            </div>
+        <div id="groupList" class="group-list">
+          <div id="noGroups" style="padding: 20px; text-align: center; color: #666;">
+            <div style="font-size: 24px; margin-bottom: 10px;">📂</div>
+            <div>暂无标签组</div>
           </div>
         </div>
       </div>
 
-      <div id="sortingMetricsContainer" class="card">
-        <div class="card-header">
-          <div class="card-icon">📊</div>
-          <div class="card-title">排序指标</div>
+      <div class="tab-content" id="metrics-tab">
+        <div class="content-header">
+          <h3 class="content-title">排序指标</h3>
         </div>
-        <div class="card-body">
-          <div id="sortingMetrics" class="sorting-metrics"></div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon">⚙️</div>
+            <div class="card-title">排序设置</div>
+          </div>
+          <div class="card-body">
+            <div class="sorting-settings">
+              <div class="sorting-section">
+                <h4>标签组排序</h4>
+                <div class="sorting-option">
+                  <label>排序方法:</label>
+                  <select id="groupSortingMethod" class="select-control">
+                    <option value="title">按标题</option>
+                    <option value="size">按大小</option>
+                    <option value="smart" selected>智能排序</option>
+                  </select>
+                </div>
+                <div class="sorting-option">
+                  <label>排序顺序:</label>
+                  <button id="groupSortOrder" class="sort-order-button">
+                    <span id="groupSortOrderIcon">↑</span>
+                    <span id="groupSortOrderText">升序</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="sorting-section">
+                <h4>组内标签排序</h4>
+                <div class="sorting-option">
+                  <label>排序方法:</label>
+                  <select id="tabSortingMethod" class="select-control">
+                    <option value="title">按标题</option>
+                    <option value="domain" selected>按域名</option>
+                    <option value="smart">智能排序</option>
+                  </select>
+                </div>
+                <div class="sorting-option">
+                  <label>排序顺序:</label>
+                  <button id="tabSortOrder" class="sort-order-button">
+                    <span id="tabSortOrderIcon">↑</span>
+                    <span id="tabSortOrderText">升序</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="sortingMetricsContainer" class="card">
+          <div class="card-header">
+            <div class="card-icon">📊</div>
+            <div class="card-title">排序指标</div>
+          </div>
+          <div class="card-body">
+            <div id="sortingMetrics" class="sorting-metrics"></div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <div class="tab-content" id="debug-tab">
-      <!-- 调试按钮 -->
-      <div class="debug-grid">
-        <button id="testConnection" class="debug-button">测试连接</button>
-        <button id="testGroupByDomain" class="debug-button">测试分组</button>
-        <button id="testUngroupAll" class="debug-button">测试取消分组</button>
-        <button id="testSortTabGroups" class="debug-button">测试排序</button>
-        <button id="testGetSortingMetrics" class="debug-button">测试获取指标</button>
+      <div class="tab-content" id="debug-tab">
+        <div class="content-header">
+          <h3 class="content-title">调试</h3>
+        </div>
+        <!-- 调试按钮 -->
+        <div class="debug-grid">
+          <button id="testConnection" class="debug-button">测试连接</button>
+          <button id="testGroupByDomain" class="debug-button">测试分组</button>
+          <button id="testUngroupAll" class="debug-button">测试取消分组</button>
+          <button id="testSortTabGroups" class="debug-button">测试排序</button>
+          <button id="testGetSortingMetrics" class="debug-button">测试获取指标</button>
+        </div>
       </div>
     </div>
   </div>

@@ -303,8 +303,8 @@ async function loadTabGroups(groupListElement, noGroupsElement) {
       tabList.style.display = isExpanded ? 'block' : 'none';
 
       // 获取当前标签排序方法和排序顺序
-      let tabSortMethod = 'position'; // 默认按位置排序
-      let tabSortAscending = true; // 默认升序
+      let tabSortMethod = 'smart'; // 默认智能排序
+      let tabSortAscending = false; // 默认降序
 
       try {
         const statusResponse = await chrome.runtime.sendMessage({ action: 'getExtensionStatus' });

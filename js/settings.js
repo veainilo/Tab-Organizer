@@ -11,8 +11,8 @@ let settings = {
   ignoreTLD: true,                // 忽略顶级域名
   useDynamicColors: true,         // 使用动态颜色
   enableTabSorting: true,         // 启用标签排序
-  sortingMethod: 'domain',        // 标签排序方法
-  sortAscending: true,            // 标签排序顺序（升序）
+  sortingMethod: 'smart',         // 标签排序方法（默认智能排序）
+  sortAscending: false,           // 标签排序顺序（默认降序）
   enableGroupSorting: true,       // 启用标签组排序
   groupSortingMethod: 'smart',    // 标签组排序方法
   groupSortAscending: true,       // 标签组排序顺序（升序）
@@ -64,13 +64,13 @@ function loadSettings() {
  */
 function updateSettings(newSettings) {
   const oldSettings = {...settings};
-  
+
   // 更新设置
   Object.assign(settings, newSettings);
-  
+
   // 保存设置
   saveSettings();
-  
+
   // 返回旧设置和新设置
   return { oldSettings, newSettings: settings };
 }

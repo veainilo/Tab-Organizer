@@ -40,19 +40,19 @@ async function executeMonitoringTask() {
     } else {
       console.log('自动分组未启用，跳过分组步骤');
     }
-    
+
     // 2. 然后对标签组进行排序 - 强制执行，确保排序生效
     console.log('执行自动标签组排序 - 开始');
     const groupSortResult = await sortTabGroups();
     console.log('标签组排序结果:', groupSortResult ? '成功' : '失败');
-    
+
     // 3. 最后对每个标签组内的标签进行排序 - 强制执行，确保排序生效
     console.log('执行自动标签组内标签排序 - 开始');
-    
+
     // 获取所有标签组
     const groups = await chrome.tabGroups.query({ windowId: WINDOW_ID_CURRENT });
     console.log('找到', groups.length, '个标签组需要排序');
-    
+
     if (groups.length > 0) {
       // 对每个标签组内的标签进行排序
       for (const group of groups) {
@@ -63,7 +63,7 @@ async function executeMonitoringTask() {
     } else {
       console.log('没有找到标签组，跳过组内标签排序');
     }
-    
+
     console.log('自动监控任务完成');
   } catch (error) {
     console.error('自动监控任务出错:', error);
@@ -76,6 +76,8 @@ async function executeMonitoringTask() {
 function startContinuousMonitoring() {
   if (!settings.monitoringEnabled || !settings.extensionActive) {
     console.log('持续监控未启用或扩展未激活，不启动监控');
+    // 确保下一次执行时间被重置
+    nextExecutionTime = 0;
     return;
   }
 
@@ -107,6 +109,9 @@ function startContinuousMonitoring() {
       }
     }, settings.autoGroupInterval);
     console.log('自动监控定时器已启动，间隔:', settings.autoGroupInterval, 'ms');
+  } else {
+    console.log('自动监控间隔无效，不启动定时器');
+    nextExecutionTime = 0;
   }
 }
 
@@ -125,6 +130,7 @@ function stopContinuousMonitoring() {
 
   // 重置下一次执行时间
   nextExecutionTime = 0;
+  console.log('下一次执行时间已重置为0');
 }
 
 /**
@@ -163,6 +169,20 @@ function updateMonitoringStatus() {
  * @returns {number} 下一次执行时间的时间戳
  */
 function getNextExecutionTime() {
+  // 如果监控未启用或扩展未激活，返回0
+  if (!settings.monitoringEnabled || !settings.extensionActive) {
+    return 0;
+  }
+
+  // 如果下一次执行时间未设置或已过期，计算新的执行时间
+  if (nextExecutionTime <= 0 || nextExecutionTime < Date.now()) {
+    // 只有在自动监控间隔大于0时才计算新的执行时间
+    if (settings.autoGroupInterval > 0) {
+      return Date.now() + settings.autoGroupInterval;
+    }
+    return 0;
+  }
+
   return nextExecutionTime;
 }
 

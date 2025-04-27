@@ -1,83 +1,82 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Edge Tab Organizer</title>
+  <title>Edge 标签页组织器</title>
   <meta charset="UTF-8">
   <link rel="stylesheet" href="css/popup.css">
 </head>
 <body>
-  <h1 data-i18n="extName">Edge Tab Organizer</h1>
+  <h1>Edge 标签页组织器</h1>
 
   <div class="section">
     <!-- 插件激活开关 -->
-    <div class="toggle-container">
-      <label class="switch">
-        <input type="checkbox" id="extensionActiveToggle" checked>
-        <span class="slider round"></span>
-      </label>
-      <div class="toggle-info">
-        <div class="toggle-title">
-          <span class="status-indicator status-active" id="extensionActiveIndicator"></span>
-          <span id="extensionActiveStatus">插件已激活</span>
+    <div class="switch-card">
+      <div class="switch-header">
+        <div class="switch-title">启用或禁用标签页自动分组功能</div>
+        <div class="switch-wrapper">
+          <label class="switch">
+            <input type="checkbox" id="extensionActiveToggle" checked>
+            <span class="slider round"></span>
+          </label>
         </div>
-        <div class="toggle-description">启用或禁用标签页自动分组功能</div>
+      </div>
+      <div class="switch-status">
+        <span class="status-indicator status-active" id="extensionActiveIndicator"></span>
+        <span id="extensionActiveStatus">插件已激活</span>
       </div>
     </div>
 
     <!-- 持续监控开关 -->
-    <div class="toggle-container">
-      <label class="switch">
-        <input type="checkbox" id="monitoringToggle" checked>
-        <span class="slider round"></span>
-      </label>
-      <div class="toggle-info">
-        <div class="toggle-title">
-          <span class="status-indicator status-active" id="monitoringIndicator"></span>
-          <span id="monitoringStatus">持续监控已启用</span>
-          <div class="interval-input">
-            <span>间隔:</span>
-            <input type="number" id="monitoringInterval" min="1000" step="1000" value="5000">
-            <span>毫秒</span>
-            <div class="countdown-container">
-              <span class="countdown-label">下次执行:</span>
-              <span class="countdown" id="monitoringCountdown"></span>
-            </div>
-          </div>
+    <div class="switch-card">
+      <div class="switch-header">
+        <div class="switch-title">自动监控标签页状态并进行分组和排序</div>
+        <div class="switch-wrapper">
+          <label class="switch">
+            <input type="checkbox" id="monitoringToggle" checked>
+            <span class="slider round"></span>
+          </label>
         </div>
-        <div class="toggle-description">自动监控标签页状态并进行分组和排序</div>
+      </div>
+      <div class="switch-status">
+        <span class="status-indicator status-active" id="monitoringIndicator"></span>
+        <span id="monitoringStatus">持续监控已启用</span>
+      </div>
+      <div class="monitoring-settings">
+        <div class="interval-setting">
+          <span class="interval-label">间隔:</span>
+          <input type="number" id="monitoringInterval" min="1" step="1" value="5">
+          <span class="interval-unit">秒</span>
+        </div>
+        <div class="countdown-container">
+          <span class="countdown-label">下次执行:</span>
+          <span class="countdown" id="monitoringCountdown">--:--</span>
+        </div>
       </div>
     </div>
   </div>
 
   <div class="section">
-    <h3 class="section-title">
-      <i>⚡</i>快速操作
-    </h3>
-    <div class="button-container">
-      <div class="button-row">
-        <div class="button-col-2">
-          <button id="groupByDomain" data-i18n="groupByDomain">
-            <i>📊</i>按域名分组
-          </button>
-        </div>
-        <div class="button-col-2">
-          <button id="ungroupAll" data-i18n="ungroupAll">
-            <i>🔄</i>取消所有分组
-          </button>
-        </div>
-      </div>
-      <div class="button-row">
-        <div class="button-col-2">
-          <button id="sortTabs" data-i18n="sortTabs">
-            <i>📋</i>组内标签排序
-          </button>
-        </div>
-        <div class="button-col-2">
-          <button id="sortGroups" data-i18n="sortGroups">
-            <i>📑</i>标签组排序
-          </button>
-        </div>
-      </div>
+    <div class="section-header">
+      <i class="section-icon">⚡</i>
+      <h3 class="section-title">快速操作</h3>
+    </div>
+    <div class="action-grid">
+      <button id="groupByDomain" class="action-button">
+        <div class="action-icon">📊</div>
+        <div class="action-text">按域名分组</div>
+      </button>
+      <button id="ungroupAll" class="action-button">
+        <div class="action-icon">🔄</div>
+        <div class="action-text">取消所有分组</div>
+      </button>
+      <button id="sortTabs" class="action-button">
+        <div class="action-icon">📋</div>
+        <div class="action-text">组内标签排序</div>
+      </button>
+      <button id="sortGroups" class="action-button">
+        <div class="action-icon">📑</div>
+        <div class="action-text">标签组排序</div>
+      </button>
     </div>
   </div>
 
@@ -85,82 +84,97 @@
 
   <div class="tab-container">
     <div class="tab-buttons">
-      <button class="tab-button active" data-tab="groups">当前标签组</button>
-      <button class="tab-button" data-tab="metrics">排序指标</button>
-      <button class="tab-button" data-tab="debug">调试</button>
+      <button class="tab-button active" data-tab="groups">
+        <span class="tab-icon">📑</span>
+        <span class="tab-label">当前标签组</span>
+      </button>
+      <button class="tab-button" data-tab="metrics">
+        <span class="tab-icon">📊</span>
+        <span class="tab-label">排序指标</span>
+      </button>
+      <button class="tab-button" data-tab="debug">
+        <span class="tab-icon">🔧</span>
+        <span class="tab-label">调试</span>
+      </button>
     </div>
 
     <div class="tab-content active" id="groups-tab">
       <div id="groupList" class="group-list">
-        <div id="noGroups" data-i18n="noGroups" style="padding: 15px; text-align: center; color: #666;">No tab groups found</div>
+        <div id="noGroups" style="padding: 20px; text-align: center; color: #666;">
+          <div style="font-size: 24px; margin-bottom: 10px;">📂</div>
+          <div>暂无标签组</div>
+        </div>
       </div>
     </div>
 
     <div class="tab-content" id="metrics-tab">
-      <div class="sorting-settings-container">
-        <h3 class="metrics-title">
-          <i>⚙️</i>
-          <span>排序设置</span>
-        </h3>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon">⚙️</div>
+          <div class="card-title">排序设置</div>
+        </div>
+        <div class="card-body">
+          <div class="sorting-settings">
+            <div class="sorting-section">
+              <h4>标签组排序</h4>
+              <div class="sorting-option">
+                <label>排序方法:</label>
+                <select id="groupSortingMethod" class="select-control">
+                  <option value="title">按标题</option>
+                  <option value="size">按大小</option>
+                  <option value="smart" selected>智能排序</option>
+                </select>
+              </div>
+              <div class="sorting-option">
+                <label>排序顺序:</label>
+                <button id="groupSortOrder" class="sort-order-button">
+                  <span id="groupSortOrderIcon">↑</span>
+                  <span id="groupSortOrderText">升序</span>
+                </button>
+              </div>
+            </div>
 
-        <div class="sorting-settings">
-          <div class="sorting-section">
-            <h4>标签组排序</h4>
-            <div class="sorting-option">
-              <label>排序方法:</label>
-              <select id="groupSortingMethod">
-                <option value="title">按标题</option>
-                <option value="size">按大小</option>
-                <option value="smart" selected>智能排序</option>
-              </select>
-            </div>
-            <div class="sorting-option">
-              <label>排序顺序:</label>
-              <button id="groupSortOrder" class="sort-order-button">
-                <span id="groupSortOrderIcon">↑</span>
-                <span id="groupSortOrderText">升序</span>
-              </button>
-            </div>
-          </div>
-
-          <div class="sorting-section">
-            <h4>组内标签排序</h4>
-            <div class="sorting-option">
-              <label>排序方法:</label>
-              <select id="tabSortingMethod">
-                <option value="title">按标题</option>
-                <option value="domain" selected>按域名</option>
-                <option value="smart">智能排序</option>
-              </select>
-            </div>
-            <div class="sorting-option">
-              <label>排序顺序:</label>
-              <button id="tabSortOrder" class="sort-order-button">
-                <span id="tabSortOrderIcon">↑</span>
-                <span id="tabSortOrderText">升序</span>
-              </button>
+            <div class="sorting-section">
+              <h4>组内标签排序</h4>
+              <div class="sorting-option">
+                <label>排序方法:</label>
+                <select id="tabSortingMethod" class="select-control">
+                  <option value="title">按标题</option>
+                  <option value="domain" selected>按域名</option>
+                  <option value="smart">智能排序</option>
+                </select>
+              </div>
+              <div class="sorting-option">
+                <label>排序顺序:</label>
+                <button id="tabSortOrder" class="sort-order-button">
+                  <span id="tabSortOrderIcon">↑</span>
+                  <span id="tabSortOrderText">升序</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div id="sortingMetricsContainer" class="sorting-metrics-container">
-        <h3 class="metrics-title">
-          <i>📊</i>
-          <span data-i18n="sortingMetrics">排序指标</span>
-        </h3>
-        <div id="sortingMetrics" class="sorting-metrics"></div>
+      <div id="sortingMetricsContainer" class="card">
+        <div class="card-header">
+          <div class="card-icon">📊</div>
+          <div class="card-title">排序指标</div>
+        </div>
+        <div class="card-body">
+          <div id="sortingMetrics" class="sorting-metrics"></div>
+        </div>
       </div>
     </div>
 
     <div class="tab-content" id="debug-tab">
       <!-- 调试按钮 -->
-      <div class="button-container">
-        <button id="testConnection" class="button-secondary">测试连接</button>
-        <button id="testGroupByDomain" class="button-secondary">测试分组</button>
-        <button id="testUngroupAll" class="button-secondary">测试取消分组</button>
-        <button id="testSortTabGroups" class="button-secondary">测试排序</button>
-        <button id="testGetSortingMetrics" class="button-secondary">测试获取指标</button>
+      <div class="debug-grid">
+        <button id="testConnection" class="debug-button">测试连接</button>
+        <button id="testGroupByDomain" class="debug-button">测试分组</button>
+        <button id="testUngroupAll" class="debug-button">测试取消分组</button>
+        <button id="testSortTabGroups" class="debug-button">测试排序</button>
+        <button id="testGetSortingMetrics" class="debug-button">测试获取指标</button>
       </div>
     </div>
   </div>

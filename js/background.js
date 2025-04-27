@@ -8,9 +8,17 @@ import { groupTabsByDomain, ungroupAllTabs, isManualUngrouping, setManualUngroup
 import { sortTabsInGroup, getSortingMetrics } from './tab-sorting.js';
 import { sortTabGroups } from './group-sorting.js';
 import { executeMonitoringTask, updateMonitoringStatus, getNextExecutionTime } from './monitoring.js';
+import { initBehaviorTracking } from './tab-behavior.js';
 
 // 初始化 service worker
 console.log('Edge Tab Organizer - Background Service Worker 已启动');
+
+// 初始化行为跟踪模块
+initBehaviorTracking().then(() => {
+  console.log('标签行为跟踪模块初始化完成');
+}).catch(error => {
+  console.error('标签行为跟踪模块初始化失败:', error);
+});
 
 // 加载设置
 loadSettings().then(() => {

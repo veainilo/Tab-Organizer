@@ -6,6 +6,7 @@
  */
 
 import { extractDomain } from './utils.js';
+import { calculateBehaviorScore, calculateGroupBehaviorScore, formatTimeDifference, formatTime, getTabMetadata } from './tab-behavior.js';
 
 /**
  * 排序算法详情
@@ -27,12 +28,15 @@ const SCORING_ALGORITHMS = {
     },
     smart: {
       name: '智能排序',
-      description: '综合考虑多个因素进行智能排序',
-      formula: 'score = (urlScore * 0.4) + (titleScore * 0.4) + (domainScore * 0.2)',
+      description: '综合考虑用户行为和内容特征进行智能排序',
+      formula: 'score = (behaviorScore * 0.7) + (contentScore * 0.3)',
       factors: [
-        { name: 'URL长度', weight: 0.4, calculation: 'min(url.length / 100, 1)' },
-        { name: '标题长度', weight: 0.4, calculation: 'min(title.length / 50, 1)' },
-        { name: '域名长度', weight: 0.2, calculation: 'domain.length / 20' }
+        { name: '访问频率', weight: 0.28, calculation: 'min(访问次数 / 20, 1)' },
+        { name: '最近访问', weight: 0.28, calculation: '1 - (距今天数 / 7)' },
+        { name: '停留时间', weight: 0.14, calculation: 'min(停留分钟 / 30, 1)' },
+        { name: 'URL长度', weight: 0.12, calculation: 'min(url.length / 100, 1)' },
+        { name: '标题长度', weight: 0.12, calculation: 'min(title.length / 50, 1)' },
+        { name: '域名长度', weight: 0.06, calculation: 'domain.length / 20' }
       ]
     }
   },
@@ -52,12 +56,13 @@ const SCORING_ALGORITHMS = {
     },
     smart: {
       name: '智能排序',
-      description: '综合考虑多个因素进行智能排序',
-      formula: 'score = (accessScore * 0.5) + (sizeScore * 0.3) + (createScore * 0.2)',
+      description: '综合考虑组内标签的使用行为和内容特征进行智能排序',
+      formula: 'score = (behaviorScore * 0.7) + (contentScore * 0.3)',
       factors: [
-        { name: '访问时间', weight: 0.5, calculation: '固定值0.5（实际应用中应基于真实访问时间）' },
-        { name: '标签数量', weight: 0.3, calculation: 'min(size / 10, 1)' },
-        { name: '创建时间', weight: 0.2, calculation: '固定值0.5（实际应用中应基于真实创建时间）' }
+        { name: '访问频率', weight: 0.28, calculation: '组内标签平均访问频率' },
+        { name: '最近访问', weight: 0.28, calculation: '组内最近访问的标签时间' },
+        { name: '停留时间', weight: 0.14, calculation: '组内标签平均停留时间' },
+        { name: '标签数量', weight: 0.3, calculation: 'min(size / 10, 1)' }
       ]
     }
   }
@@ -79,14 +84,22 @@ export function calculateTabScore(tab, sortMethod) {
     // 按域名排序
     score = extractDomain(tab.url || '');
   } else if (sortMethod === 'smart') {
-    // 智能排序（结合多个因素）
-    // 使用稳定的计算方法，避免随机性
+    // 智能排序（结合行为数据和内容特征）
+
+    // 1. 计算行为分数（70%权重）
+    const behaviorResult = calculateBehaviorScore(tab);
+    const behaviorScore = behaviorResult.finalScore;
+
+    // 2. 计算内容分数（30%权重）
     const urlScore = tab.url ? Math.min(tab.url.length / 100, 1) : 0; // URL长度分数
     const titleScore = tab.title ? Math.min(tab.title.length / 50, 1) : 0; // 标题长度分数
     const domainScore = tab.url ? extractDomain(tab.url).length / 20 : 0; // 域名长度分数
 
-    // 加权平均
-    score = (urlScore * 0.4) + (titleScore * 0.4) + (domainScore * 0.2);
+    // 内容特征加权平均
+    const contentScore = (urlScore * 0.4) + (titleScore * 0.4) + (domainScore * 0.2);
+
+    // 3. 组合行为分数和内容分数
+    score = (behaviorScore * 0.7) + (contentScore * 0.3);
 
     // 保留两位小数，确保一致性
     score = parseFloat(score.toFixed(2));
@@ -115,27 +128,18 @@ export function calculateGroupScore(group, tabs, sortMethod) {
     // 按大小排序
     score = tabs.length;
   } else if (sortMethod === 'smart') {
-    // 智能排序（基于标签页数量和其他因素）
+    // 智能排序（基于组内标签的行为数据和标签数量）
+
+    // 1. 计算行为分数（70%权重）
+    const behaviorResult = calculateGroupBehaviorScore(tabs);
+    const behaviorScore = behaviorResult.finalScore;
+
+    // 2. 计算内容分数（主要是标签数量，30%权重）
     const size = tabs.length;
     const sizeScore = Math.min(size / 10, 1); // 最多10个标签页得满分
 
-    // 使用稳定的计算方法，避免随机性
-    // 在实际应用中，应该使用真实的访问时间和创建时间数据
-    // 这里我们主要使用标签页数量作为主要因素
-    const accessWeight = 0.5;
-    const sizeWeight = 0.3;
-    const createWeight = 0.2;
-
-    // 为了保持一致性，我们使用固定的访问分数和创建分数
-    // 在实际应用中，这些应该基于真实数据
-    const accessScore = 0.5; // 固定值，避免随机性
-    const createScore = 0.5; // 固定值，避免随机性
-
-    score = (
-      accessScore * accessWeight +
-      sizeScore * sizeWeight +
-      createScore * createWeight
-    );
+    // 3. 组合行为分数和内容分数
+    score = (behaviorScore * 0.7) + (sizeScore * 0.3);
 
     // 保留两位小数，确保一致性
     score = parseFloat(score.toFixed(2));
@@ -256,6 +260,33 @@ export function getTabScoringDetails(tab, sortMethod) {
       weight: 1
     });
   } else if (sortMethod === 'smart') {
+    // 获取行为分数详情
+    const behaviorResult = calculateBehaviorScore(tab);
+    const behaviorComponents = behaviorResult.components;
+
+    // 添加行为因素
+    result.factors.push({
+      name: '访问频率',
+      value: formatVisitCount(tab.id),
+      score: behaviorComponents.accessScore.toFixed(2),
+      weight: 0.28
+    });
+
+    result.factors.push({
+      name: '最近访问',
+      value: formatLastVisit(tab.id),
+      score: behaviorComponents.recencyScore.toFixed(2),
+      weight: 0.28
+    });
+
+    result.factors.push({
+      name: '停留时间',
+      value: formatStayTime(tab.id),
+      score: behaviorComponents.timeScore.toFixed(2),
+      weight: 0.14
+    });
+
+    // 添加内容因素
     const urlScore = tab.url ? Math.min(tab.url.length / 100, 1) : 0;
     const titleScore = tab.title ? Math.min(tab.title.length / 50, 1) : 0;
     const domainScore = tab.url ? extractDomain(tab.url).length / 20 : 0;
@@ -264,19 +295,21 @@ export function getTabScoringDetails(tab, sortMethod) {
       name: 'URL长度',
       value: tab.url ? tab.url.length : 0,
       score: urlScore.toFixed(2),
-      weight: 0.4
+      weight: 0.12
     });
+
     result.factors.push({
       name: '标题长度',
       value: tab.title ? tab.title.length : 0,
       score: titleScore.toFixed(2),
-      weight: 0.4
+      weight: 0.12
     });
+
     result.factors.push({
       name: '域名长度',
       value: tab.url ? extractDomain(tab.url).length : 0,
       score: domainScore.toFixed(2),
-      weight: 0.2
+      weight: 0.06
     });
   }
 
@@ -290,6 +323,36 @@ export function getTabScoringDetails(tab, sortMethod) {
  * @param {string} sortMethod - 排序方法
  * @returns {Object} 详细评分信息
  */
+/**
+ * 格式化访问次数
+ * @param {number} tabId - 标签ID
+ * @returns {string} 格式化的访问次数
+ */
+function formatVisitCount(tabId) {
+  const metadata = getTabMetadata(tabId);
+  return metadata ? `${metadata.accessCount || 0}次` : '0次';
+}
+
+/**
+ * 格式化最后访问时间
+ * @param {number} tabId - 标签ID
+ * @returns {string} 格式化的最后访问时间
+ */
+function formatLastVisit(tabId) {
+  const metadata = getTabMetadata(tabId);
+  return metadata && metadata.lastAccess ? formatTimeDifference(metadata.lastAccess) : '从未';
+}
+
+/**
+ * 格式化停留时间
+ * @param {number} tabId - 标签ID
+ * @returns {string} 格式化的停留时间
+ */
+function formatStayTime(tabId) {
+  const metadata = getTabMetadata(tabId);
+  return metadata ? formatTime(metadata.totalTime || 0) : '0分钟';
+}
+
 export function getGroupScoringDetails(group, tabs, sortMethod) {
   const result = {
     finalScore: calculateGroupScore(group, tabs, sortMethod),
@@ -312,28 +375,42 @@ export function getGroupScoringDetails(group, tabs, sortMethod) {
       weight: 1
     });
   } else if (sortMethod === 'smart') {
-    const size = tabs.length;
-    const sizeScore = Math.min(size / 10, 1);
-    const accessScore = 0.5; // 固定值
-    const createScore = 0.5; // 固定值
+    // 获取行为分数详情
+    const behaviorResult = calculateGroupBehaviorScore(tabs);
+    const behaviorComponents = behaviorResult.components;
+
+    // 添加行为因素
+    result.factors.push({
+      name: '访问频率',
+      value: '组内平均',
+      score: behaviorComponents.accessScore.toFixed(2),
+      weight: 0.28
+    });
 
     result.factors.push({
-      name: '访问时间',
-      value: '固定值',
-      score: accessScore.toFixed(2),
-      weight: 0.5
+      name: '最近访问',
+      value: tabs.length > 0 && behaviorComponents.recencyScore > 0 ?
+             formatTimeDifference(Date.now() - (1 - behaviorComponents.recencyScore) * 7 * 24 * 60 * 60 * 1000) : '从未',
+      score: behaviorComponents.recencyScore.toFixed(2),
+      weight: 0.28
     });
+
+    result.factors.push({
+      name: '停留时间',
+      value: '组内平均',
+      score: behaviorComponents.timeScore.toFixed(2),
+      weight: 0.14
+    });
+
+    // 添加标签数量因素
+    const size = tabs.length;
+    const sizeScore = Math.min(size / 10, 1);
+
     result.factors.push({
       name: '标签数量',
       value: size,
       score: sizeScore.toFixed(2),
       weight: 0.3
-    });
-    result.factors.push({
-      name: '创建时间',
-      value: '固定值',
-      score: createScore.toFixed(2),
-      weight: 0.2
     });
   }
 

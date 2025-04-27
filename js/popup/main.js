@@ -53,6 +53,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const tabSortOrderIcon = document.getElementById('tabSortOrderIcon');
   const tabSortOrderText = document.getElementById('tabSortOrderText');
 
+  // 排序信息显示元素在sorting-ui.js中处理
+
   // 初始化监控 UI
   initMonitoringUI(
     extensionActiveToggle, extensionActiveStatus,
@@ -304,7 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // 监听后台消息
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message) => {
   console.log('Popup received message:', message);
 
   // 处理消息

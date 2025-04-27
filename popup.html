@@ -14,8 +14,8 @@
       <h1>Edge 标签页组织器</h1>
     </div>
     <div class="search-container">
-      <input type="text" id="searchTabs" placeholder="搜索标签页..." class="search-input">
-      <button id="searchButton" class="search-button">🔍</button>
+      <input type="text" id="searchTabs" placeholder="搜索标签页和标签组..." class="search-input">
+      <button id="searchButton" class="search-button" title="搜索标签页和标签组">🔍</button>
     </div>
   </header>
 
@@ -127,7 +127,10 @@
     <!-- 右侧标签组列表 -->
     <div class="right-panel">
       <div class="tab-groups-header">
-        <h2 class="panel-title">当前标签组</h2>
+        <div class="tab-groups-title">
+          <h2 class="panel-title">当前标签组</h2>
+          <div class="sort-info">按<span id="currentSortMethod">智能排序</span><span id="currentSortOrder">升序</span>排列</div>
+        </div>
         <div class="tab-groups-actions">
           <button id="refreshGroups" class="icon-button" title="刷新标签组列表">🔄</button>
           <button id="collapseAll" class="icon-button" title="折叠所有标签组">📕</button>

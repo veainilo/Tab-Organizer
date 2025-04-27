@@ -264,34 +264,54 @@ function initSortingSettings(
   tabSortingMethod, tabSortOrder, tabSortOrderIcon, tabSortOrderText,
   sortingMetricsElement, sortingMetricsContainer
 ) {
+  // 获取当前排序方法和顺序显示元素
+  const currentSortMethod = document.getElementById('currentSortMethod');
+  const currentSortOrder = document.getElementById('currentSortOrder');
   // 获取当前设置
   chrome.runtime.sendMessage({ action: 'getExtensionStatus' }, (response) => {
     if (response && response.success && response.settings) {
       const settings = response.settings;
-      
+
       // 设置标签组排序方法
       if (settings.groupSortingMethod) {
         groupSortingMethod.value = settings.groupSortingMethod;
+
+        // 更新当前排序方法显示
+        if (currentSortMethod) {
+          const methodText = groupSortingMethod.options[groupSortingMethod.selectedIndex].text;
+          currentSortMethod.textContent = methodText;
+        }
       }
-      
+
       // 设置标签组排序顺序
       updateSortOrderButton(groupSortOrderIcon, groupSortOrderText, settings.groupSortAscending);
-      
+
+      // 更新当前排序顺序显示
+      if (currentSortOrder) {
+        currentSortOrder.textContent = settings.groupSortAscending ? '升序' : '降序';
+      }
+
       // 设置标签排序方法
       if (settings.sortingMethod) {
         tabSortingMethod.value = settings.sortingMethod;
       }
-      
+
       // 设置标签排序顺序
       updateSortOrderButton(tabSortOrderIcon, tabSortOrderText, settings.sortAscending);
     }
   });
-  
+
   // 添加标签组排序方法变更事件
   groupSortingMethod.addEventListener('change', () => {
     const method = groupSortingMethod.value;
+    const methodText = groupSortingMethod.options[groupSortingMethod.selectedIndex].text;
     console.log('标签组排序方法变更为:', method);
-    
+
+    // 更新当前排序方法显示
+    if (currentSortMethod) {
+      currentSortMethod.textContent = methodText;
+    }
+
     chrome.runtime.sendMessage({
       action: 'updateSortingMethod',
       method: method,
@@ -306,7 +326,7 @@ function initSortingSettings(
       }
     });
   });
-  
+
   // 添加标签组排序顺序变更事件
   groupSortOrder.addEventListener('click', () => {
     chrome.runtime.sendMessage({
@@ -316,6 +336,12 @@ function initSortingSettings(
       if (response && response.success) {
         const ascending = response.sortAscending;
         updateSortOrderButton(groupSortOrderIcon, groupSortOrderText, ascending);
+
+        // 更新当前排序顺序显示
+        if (currentSortOrder) {
+          currentSortOrder.textContent = ascending ? '升序' : '降序';
+        }
+
         showStatus('标签组排序顺序已更新', 'success');
         // 重新加载排序指标
         loadSortingMetrics(sortingMetricsElement, sortingMetricsContainer);
@@ -324,12 +350,12 @@ function initSortingSettings(
       }
     });
   });
-  
+
   // 添加标签排序方法变更事件
   tabSortingMethod.addEventListener('change', () => {
     const method = tabSortingMethod.value;
     console.log('标签排序方法变更为:', method);
-    
+
     chrome.runtime.sendMessage({
       action: 'updateSortingMethod',
       method: method,
@@ -344,7 +370,7 @@ function initSortingSettings(
       }
     });
   });
-  
+
   // 添加标签排序顺序变更事件
   tabSortOrder.addEventListener('click', () => {
     chrome.runtime.sendMessage({

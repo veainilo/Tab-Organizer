@@ -198,16 +198,23 @@ async function loadTabGroups(groupListElement, noGroupsElement) {
     groupListElement.appendChild(headerRow);
 
     // 添加标签组列表
-    for (const group of sortedGroups) {
+    for (let i = 0; i < sortedGroups.length; i++) {
+      const group = sortedGroups[i];
       const groupItem = document.createElement('div');
       groupItem.className = 'group-item';
       groupItem.dataset.groupId = group.id;
+      groupItem.dataset.sortIndex = i;
 
       // 创建标签组标题栏
       const groupHeader = document.createElement('div');
       groupHeader.className = 'group-item-header';
       groupHeader.style.backgroundColor = getGroupColorBackground(group.color);
       groupHeader.style.color = getGroupColorText(group.color);
+
+      // 创建排序序号指示器
+      const orderIndicator = document.createElement('span');
+      orderIndicator.className = 'order-indicator';
+      orderIndicator.textContent = (i + 1).toString();
 
       // 创建展开/折叠按钮
       const expandButton = document.createElement('button');
@@ -231,9 +238,28 @@ async function loadTabGroups(groupListElement, noGroupsElement) {
       tabCount.className = 'tab-count';
       tabCount.textContent = groupTabCounts[group.id] || 0;
 
+      // 创建排序分数指示器
+      const scoreIndicator = document.createElement('span');
+      scoreIndicator.className = 'score-indicator';
+
+      // 获取排序分数
+      let scoreText = '';
+      if (groupScores[group.id] !== undefined) {
+        const score = groupScores[group.id];
+        if (typeof score === 'number') {
+          scoreText = score.toFixed(2); // 数字格式化为两位小数
+        } else {
+          scoreText = String(score);
+        }
+      }
+
+      scoreIndicator.textContent = scoreText;
+
       // 添加元素到标题栏
+      groupHeader.appendChild(orderIndicator);
       groupHeader.appendChild(expandButton);
       groupHeader.appendChild(groupTitle);
+      groupHeader.appendChild(scoreIndicator);
       groupHeader.appendChild(tabCount);
 
       // 创建标签列表容器
@@ -287,17 +313,24 @@ async function loadTabGroups(groupListElement, noGroupsElement) {
           console.log('无法解析URL:', tab.url);
         }
 
-        // 添加元素到标签内容容器
-        tabItemContent.appendChild(iconContainer);
-        tabItemContent.appendChild(tabTitle);
+        // 创建文本容器
+        const textContainer = document.createElement('div');
+        textContainer.className = 'tab-text-container';
+
+        // 添加标题到文本容器
+        textContainer.appendChild(tabTitle);
 
         // 如果有域名，添加域名显示
         if (domain) {
           const tabDomain = document.createElement('div');
           tabDomain.className = 'tab-domain';
           tabDomain.textContent = domain;
-          tabItemContent.appendChild(tabDomain);
+          textContainer.appendChild(tabDomain);
         }
+
+        // 添加元素到标签内容容器
+        tabItemContent.appendChild(iconContainer);
+        tabItemContent.appendChild(textContainer);
 
         // 添加内容容器到标签项
         tabItem.appendChild(tabItemContent);

@@ -82,8 +82,24 @@
 
 .group-item-header {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   padding: 8px 10px;
+}
+
+/* 标题行样式 */
+.group-title-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 4px;
+}
+
+/* 分数行样式 */
+.group-score-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding-left: 24px; /* 与标题行对齐，考虑到序号和展开按钮的宽度 */
 }
 
 .order-indicator {
@@ -132,27 +148,30 @@
   text-overflow: ellipsis;
   color: #333;
   text-shadow: 0 1px 0 rgba(255,255,255,0.5);
+  max-width: 70%; /* 确保标题不会占用太多空间，给标签数量留出空间 */
 }
 
 .score-indicator {
   background-color: rgba(255,255,255,0.3);
-  padding: 2px 8px;
-  border-radius: 12px;
+  padding: 4px 8px;
+  border-radius: 8px;
   font-size: 10px;
-  margin-left: 6px;
-  font-weight: 600;
-  min-width: 36px;
-  text-align: center;
+  font-weight: 500;
+  width: 100%;
+  max-width: 100%;
+  text-align: left;
   border: 1px solid rgba(255,255,255,0.4);
   box-shadow: 0 1px 2px rgba(0,0,0,0.05);
   position: relative;
+  cursor: help;
+  transition: background-color 0.2s;
+  white-space: normal;
+  word-wrap: break-word;
+  line-height: 1.4;
 }
 
-.score-indicator::before {
-  content: "分数: ";
-  font-size: 9px;
-  font-weight: normal;
-  opacity: 0.8;
+.score-indicator:hover {
+  background-color: rgba(255,255,255,0.5);
 }
 
 .tab-count {
@@ -264,16 +283,19 @@
   color: #0078d7;
   background-color: rgba(0, 120, 215, 0.1);
   border-radius: 8px;
-  padding: 1px 6px;
-  margin-top: 4px;
-  display: inline-block;
+  padding: 4px 8px;
+  margin-top: 6px;
+  display: block;
   font-weight: 500;
   position: relative;
+  cursor: help;
+  transition: background-color 0.2s;
+  width: 100%;
+  white-space: normal;
+  word-wrap: break-word;
+  line-height: 1.4;
 }
 
-.tab-score-indicator::before {
-  content: "分数: ";
-  font-size: 9px;
-  font-weight: normal;
-  opacity: 0.8;
+.tab-score-indicator:hover {
+  background-color: rgba(0, 120, 215, 0.2);
 }

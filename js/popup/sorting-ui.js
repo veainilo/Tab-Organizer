@@ -312,6 +312,8 @@ function initSortingSettings(
       currentSortMethod.textContent = methodText;
     }
 
+
+
     chrome.runtime.sendMessage({
       action: 'updateSortingMethod',
       method: method,
@@ -356,6 +358,8 @@ function initSortingSettings(
     const method = tabSortingMethod.value;
     console.log('标签排序方法变更为:', method);
 
+
+
     chrome.runtime.sendMessage({
       action: 'updateSortingMethod',
       method: method,
@@ -389,6 +393,8 @@ function initSortingSettings(
     });
   });
 }
+
+
 
 // 导出函数
 export {

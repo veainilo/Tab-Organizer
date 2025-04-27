@@ -3,7 +3,7 @@
  */
 
 import { TAB_GROUP_ID_NONE, WINDOW_ID_CURRENT, showErrorInContainer, getGroupColorBackground, getGroupColorText } from './utils.js';
-import { calculateTabScore, calculateGroupScore, sortTabsByScore, sortGroupsByScore } from '../scoring.js';
+import { calculateTabScore, calculateGroupScore, sortTabsByScore, sortGroupsByScore, getTabScoringDetails, getGroupScoringDetails } from '../scoring.js';
 
 // 保存标签组展开状态的对象
 const groupExpandStates = {};
@@ -228,6 +228,9 @@ async function loadTabGroups(groupListElement, noGroupsElement) {
       tabCount.className = 'tab-count';
       tabCount.textContent = groupTabCounts[group.id] || 0;
 
+      // 获取组内的标签页 - 移到这里，确保在使用前定义
+      const groupTabs = tabs.filter(tab => tab.groupId === group.id);
+
       // 创建排序分数指示器
       const scoreIndicator = document.createElement('span');
       scoreIndicator.className = 'score-indicator';
@@ -243,22 +246,61 @@ async function loadTabGroups(groupListElement, noGroupsElement) {
         }
       }
 
-      scoreIndicator.textContent = scoreText;
+      // 获取详细的分数计算信息
+      const groupScoringDetails = getGroupScoringDetails(group, groupTabs, currentSortMethod);
 
-      // 添加元素到标题栏
-      groupHeader.appendChild(orderIndicator);
-      groupHeader.appendChild(expandButton);
-      groupHeader.appendChild(groupTitle);
-      groupHeader.appendChild(scoreIndicator);
-      groupHeader.appendChild(tabCount);
+      // 创建分数详情提示（完整信息放在tooltip中）
+      let detailsTooltip = `分数: ${scoreText}\n排序方法: ${currentSortMethod}\n`;
+
+      // 添加各个因素的详情
+      if (groupScoringDetails.factors && groupScoringDetails.factors.length > 0) {
+        detailsTooltip += '\n计算因素:\n';
+        for (const factor of groupScoringDetails.factors) {
+          detailsTooltip += `- ${factor.name}: ${factor.score} (权重: ${factor.weight})\n`;
+        }
+      }
+
+      // 创建简洁的计算过程显示
+      let displayText = `分数: ${scoreText} (${currentSortMethod})`;
+
+      // 如果有计算因素，直接在分数指示器上显示简洁的计算过程
+      if (groupScoringDetails.factors && groupScoringDetails.factors.length > 0) {
+        displayText += '\n计算: ';
+        const factorTexts = [];
+        for (const factor of groupScoringDetails.factors) {
+          factorTexts.push(`${factor.name}(${factor.score}) × ${factor.weight}`);
+        }
+        displayText += factorTexts.join(' + ');
+      }
+
+      scoreIndicator.title = detailsTooltip; // 完整信息仍然保留在tooltip中
+      scoreIndicator.textContent = displayText;
+
+      // 创建标题行容器（包含序号、展开按钮、标题和标签数量）
+      const titleRow = document.createElement('div');
+      titleRow.className = 'group-title-row';
+
+      // 添加元素到标题行
+      titleRow.appendChild(orderIndicator);
+      titleRow.appendChild(expandButton);
+      titleRow.appendChild(groupTitle);
+      titleRow.appendChild(tabCount);
+
+      // 创建分数行容器
+      const scoreRow = document.createElement('div');
+      scoreRow.className = 'group-score-row';
+
+      // 添加分数指示器到分数行
+      scoreRow.appendChild(scoreIndicator);
+
+      // 添加行到标题栏
+      groupHeader.appendChild(titleRow);
+      groupHeader.appendChild(scoreRow);
 
       // 创建标签列表容器
       const tabList = document.createElement('div');
       tabList.className = 'tab-list';
       tabList.style.display = isExpanded ? 'block' : 'none';
-
-      // 获取组内的标签页
-      const groupTabs = tabs.filter(tab => tab.groupId === group.id);
 
       // 获取当前标签排序方法和排序顺序
       let tabSortMethod = 'position'; // 默认按位置排序
@@ -359,7 +401,38 @@ async function loadTabGroups(groupListElement, noGroupsElement) {
           }
         }
 
-        tabScoreIndicator.textContent = scoreText;
+        // 获取详细的分数计算信息
+        const tabScoringDetails = getTabScoringDetails(tab, tabSortMethod);
+
+        // 创建分数详情提示（完整信息放在tooltip中）
+        let detailsTooltip = `分数: ${scoreText}\n排序方法: ${tabSortMethod}\n`;
+
+        // 添加各个因素的详情
+        if (tabScoringDetails.factors && tabScoringDetails.factors.length > 0) {
+          detailsTooltip += '\n计算因素:\n';
+          for (const factor of tabScoringDetails.factors) {
+            detailsTooltip += `- ${factor.name}: ${factor.score} (权重: ${factor.weight})\n`;
+            if (factor.value) {
+              detailsTooltip += `  值: ${factor.value}\n`;
+            }
+          }
+        }
+
+        // 创建简洁的计算过程显示
+        let displayText = `分数: ${scoreText} (${tabSortMethod})`;
+
+        // 如果有计算因素，直接在分数指示器上显示简洁的计算过程
+        if (tabScoringDetails.factors && tabScoringDetails.factors.length > 0) {
+          displayText += '\n计算: ';
+          const factorTexts = [];
+          for (const factor of tabScoringDetails.factors) {
+            factorTexts.push(`${factor.name}(${factor.score}) × ${factor.weight}`);
+          }
+          displayText += factorTexts.join(' + ');
+        }
+
+        tabScoreIndicator.title = detailsTooltip; // 完整信息仍然保留在tooltip中
+        tabScoreIndicator.textContent = displayText;
         textContainer.appendChild(tabScoreIndicator);
 
         // 添加元素到标签内容容器

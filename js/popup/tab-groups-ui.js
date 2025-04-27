@@ -4,6 +4,7 @@
 
 import { TAB_GROUP_ID_NONE, WINDOW_ID_CURRENT, showErrorInContainer, getGroupColorBackground, getGroupColorText } from './utils.js';
 import { calculateTabScore, calculateGroupScore, sortTabsByScore, sortGroupsByScore, getTabScoringDetails, getGroupScoringDetails } from '../scoring.js';
+import { fixTabScoreDisplay, fixGroupScoringDetails, fixTabScoringDetails } from '../scoring-fix.js';
 
 // 保存标签组展开状态的对象
 const groupExpandStates = {};
@@ -247,7 +248,14 @@ async function loadTabGroups(groupListElement, noGroupsElement) {
       }
 
       // 获取详细的分数计算信息
-      const groupScoringDetails = getGroupScoringDetails(group, groupTabs, currentSortMethod);
+      let groupScoringDetails = getGroupScoringDetails(group, groupTabs, currentSortMethod);
+      console.log(`[DEBUG] 标签组 ${group.id} 评分详情:`, groupScoringDetails);
+
+      // 修复分数计算详情
+      if (currentSortMethod === 'smart') {
+        groupScoringDetails = fixGroupScoringDetails(groupScoringDetails);
+        console.log(`[DEBUG] 标签组 ${group.id} 修复后的评分详情:`, groupScoringDetails);
+      }
 
       // 创建分数详情提示（完整信息放在tooltip中）
       let detailsTooltip = `分数: ${scoreText}\n排序方法: ${currentSortMethod}\n`;
@@ -257,6 +265,9 @@ async function loadTabGroups(groupListElement, noGroupsElement) {
         detailsTooltip += '\n计算因素:\n';
         for (const factor of groupScoringDetails.factors) {
           detailsTooltip += `- ${factor.name}: ${factor.score} (权重: ${factor.weight})\n`;
+          if (factor.value) {
+            detailsTooltip += `  值: ${factor.value}\n`;
+          }
         }
       }
 
@@ -268,9 +279,16 @@ async function loadTabGroups(groupListElement, noGroupsElement) {
         displayText += '\n计算: ';
         const factorTexts = [];
         for (const factor of groupScoringDetails.factors) {
-          factorTexts.push(`${factor.name}(${factor.score}) × ${factor.weight}`);
+          // 确保使用正确的分数值
+          const factorScore = typeof factor.score === 'string' ? factor.score : factor.score.toFixed(2);
+          factorTexts.push(`${factor.name}(${factorScore}) × ${factor.weight}`);
         }
         displayText += factorTexts.join(' + ');
+      }
+
+      // 修复显示文本
+      if (currentSortMethod === 'smart') {
+        displayText = fixTabScoreDisplay(displayText);
       }
 
       scoreIndicator.title = detailsTooltip; // 完整信息仍然保留在tooltip中
@@ -402,7 +420,14 @@ async function loadTabGroups(groupListElement, noGroupsElement) {
         }
 
         // 获取详细的分数计算信息
-        const tabScoringDetails = getTabScoringDetails(tab, tabSortMethod);
+        let tabScoringDetails = getTabScoringDetails(tab, tabSortMethod);
+        console.log(`[DEBUG] 标签 ${tab.id} 评分详情:`, tabScoringDetails);
+
+        // 修复分数计算详情
+        if (tabSortMethod === 'smart') {
+          tabScoringDetails = fixTabScoringDetails(tabScoringDetails);
+          console.log(`[DEBUG] 标签 ${tab.id} 修复后的评分详情:`, tabScoringDetails);
+        }
 
         // 创建分数详情提示（完整信息放在tooltip中）
         let detailsTooltip = `分数: ${scoreText}\n排序方法: ${tabSortMethod}\n`;
@@ -426,9 +451,16 @@ async function loadTabGroups(groupListElement, noGroupsElement) {
           displayText += '\n计算: ';
           const factorTexts = [];
           for (const factor of tabScoringDetails.factors) {
-            factorTexts.push(`${factor.name}(${factor.score}) × ${factor.weight}`);
+            // 确保使用正确的分数值
+            const factorScore = typeof factor.score === 'string' ? factor.score : factor.score.toFixed(2);
+            factorTexts.push(`${factor.name}(${factorScore}) × ${factor.weight}`);
           }
           displayText += factorTexts.join(' + ');
+        }
+
+        // 修复显示文本
+        if (tabSortMethod === 'smart') {
+          displayText = fixTabScoreDisplay(displayText);
         }
 
         tabScoreIndicator.title = detailsTooltip; // 完整信息仍然保留在tooltip中

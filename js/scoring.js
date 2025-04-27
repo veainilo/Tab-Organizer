@@ -89,17 +89,24 @@ export function calculateTabScore(tab, sortMethod) {
     // 1. 计算行为分数（70%权重）
     const behaviorResult = calculateBehaviorScore(tab);
     const behaviorScore = behaviorResult.finalScore;
+    console.log(`[DEBUG] 标签 ${tab.id} 行为分数:`, behaviorScore, '详情:', behaviorResult);
 
     // 2. 计算内容分数（30%权重）
     const urlScore = tab.url ? Math.min(tab.url.length / 100, 1) : 0; // URL长度分数
     const titleScore = tab.title ? Math.min(tab.title.length / 50, 1) : 0; // 标题长度分数
     const domainScore = tab.url ? extractDomain(tab.url).length / 20 : 0; // 域名长度分数
+    console.log(`[DEBUG] 标签 ${tab.id} 内容分数:`,
+                '- URL长度:', urlScore,
+                '- 标题长度:', titleScore,
+                '- 域名长度:', domainScore);
 
     // 内容特征加权平均
     const contentScore = (urlScore * 0.4) + (titleScore * 0.4) + (domainScore * 0.2);
+    console.log(`[DEBUG] 标签 ${tab.id} 内容总分:`, contentScore);
 
     // 3. 组合行为分数和内容分数
     score = (behaviorScore * 0.7) + (contentScore * 0.3);
+    console.log(`[DEBUG] 标签 ${tab.id} 最终分数:`, score, '= 行为(', behaviorScore, '×0.7) + 内容(', contentScore, '×0.3)');
 
     // 保留两位小数，确保一致性
     score = parseFloat(score.toFixed(2));
@@ -133,13 +140,16 @@ export function calculateGroupScore(group, tabs, sortMethod) {
     // 1. 计算行为分数（70%权重）
     const behaviorResult = calculateGroupBehaviorScore(tabs);
     const behaviorScore = behaviorResult.finalScore;
+    console.log(`[DEBUG] 标签组 ${group.id} 行为分数:`, behaviorScore, '详情:', behaviorResult);
 
     // 2. 计算内容分数（主要是标签数量，30%权重）
     const size = tabs.length;
     const sizeScore = Math.min(size / 10, 1); // 最多10个标签页得满分
+    console.log(`[DEBUG] 标签组 ${group.id} 标签数量:`, size, '分数:', sizeScore);
 
     // 3. 组合行为分数和内容分数
     score = (behaviorScore * 0.7) + (sizeScore * 0.3);
+    console.log(`[DEBUG] 标签组 ${group.id} 最终分数:`, score, '= 行为(', behaviorScore, '×0.7) + 标签数量(', sizeScore, '×0.3)');
 
     // 保留两位小数，确保一致性
     score = parseFloat(score.toFixed(2));
@@ -238,8 +248,13 @@ export function getGroupScoringAlgorithmDetails(sortMethod) {
  * @returns {Object} 详细评分信息
  */
 export function getTabScoringDetails(tab, sortMethod) {
+  console.log(`[DEBUG] 获取标签 ${tab.id} 的评分详情，排序方法: ${sortMethod}`);
+
+  const finalScore = calculateTabScore(tab, sortMethod);
+  console.log(`[DEBUG] 标签 ${tab.id} 最终分数:`, finalScore);
+
   const result = {
-    finalScore: calculateTabScore(tab, sortMethod),
+    finalScore,
     method: sortMethod,
     factors: []
   };
@@ -354,8 +369,13 @@ function formatStayTime(tabId) {
 }
 
 export function getGroupScoringDetails(group, tabs, sortMethod) {
+  console.log(`[DEBUG] 获取标签组 ${group.id} 的评分详情，排序方法: ${sortMethod}，组内有 ${tabs.length} 个标签`);
+
+  const finalScore = calculateGroupScore(group, tabs, sortMethod);
+  console.log(`[DEBUG] 标签组 ${group.id} 最终分数:`, finalScore);
+
   const result = {
-    finalScore: calculateGroupScore(group, tabs, sortMethod),
+    finalScore,
     method: sortMethod,
     factors: []
   };
@@ -409,7 +429,7 @@ export function getGroupScoringDetails(group, tabs, sortMethod) {
     result.factors.push({
       name: '标签数量',
       value: size,
-      score: sizeScore.toFixed(2),
+      score: size > 0 ? sizeScore.toFixed(2) : "0.00",
       weight: 0.3
     });
   }

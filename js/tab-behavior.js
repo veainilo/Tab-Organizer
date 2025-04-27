@@ -230,6 +230,7 @@ export function calculateBehaviorScore(tab) {
 
   // 如果没有元数据，返回默认值
   if (!metadata) {
+    console.log(`[DEBUG] 标签 ${tab.id} 没有元数据，返回默认行为分数`);
     return {
       finalScore: 0,
       components: {
@@ -240,23 +241,31 @@ export function calculateBehaviorScore(tab) {
     };
   }
 
+  console.log(`[DEBUG] 标签 ${tab.id} 元数据:`, metadata);
   const now = Date.now();
 
   // 1. 访问频率分数 (0-1)
   const accessScore = Math.min(metadata.accessCount / 20, 1); // 最多20次访问获得满分
+  console.log(`[DEBUG] 标签 ${tab.id} 访问频率:`, metadata.accessCount, '次, 分数:', accessScore);
 
   // 2. 最近访问分数 (0-1)
   // 使用时间衰减函数：1天内访问=1.0，7天后=0.1
   const daysSinceLastAccess = (now - (metadata.lastAccess || 0)) / (1000 * 60 * 60 * 24);
   const recencyScore = Math.max(0, Math.min(1, 1 - (daysSinceLastAccess / 7)));
+  console.log(`[DEBUG] 标签 ${tab.id} 最近访问:`, formatTimeDifference(metadata.lastAccess || 0), '分数:', recencyScore);
 
   // 3. 停留时间分数 (0-1)
   // 总停留时间超过30分钟获得满分
   const timeScore = Math.min((metadata.totalTime || 0) / (30 * 60 * 1000), 1);
+  console.log(`[DEBUG] 标签 ${tab.id} 停留时间:`, formatTime(metadata.totalTime || 0), '分数:', timeScore);
 
   // 加权计算最终分数
+  const finalScore = (accessScore * 0.4) + (recencyScore * 0.4) + (timeScore * 0.2);
+  console.log(`[DEBUG] 标签 ${tab.id} 行为最终分数:`, finalScore,
+              '= 访问频率(', accessScore, '×0.4) + 最近访问(', recencyScore, '×0.4) + 停留时间(', timeScore, '×0.2)');
+
   return {
-    finalScore: (accessScore * 0.4) + (recencyScore * 0.4) + (timeScore * 0.2),
+    finalScore,
     components: {
       accessScore,
       recencyScore,
@@ -283,33 +292,42 @@ export function calculateGroupBehaviorScore(tabs) {
   }
 
   let totalAccessScore = 0;
-  let totalRecencyScore = 0;
   let totalTimeScore = 0;
   let validTabs = 0;
   let mostRecentAccess = 0;
 
+  console.log(`[DEBUG] 标签组内有 ${tabs.length} 个标签，开始计算行为分数`);
+
   for (const tab of tabs) {
     const metadata = tabMetadata[tab.id];
     if (metadata) {
+      console.log(`[DEBUG] 标签 ${tab.id} 元数据:`, metadata);
+
       // 访问频率
       const accessScore = Math.min(metadata.accessCount / 20, 1);
       totalAccessScore += accessScore;
+      console.log(`[DEBUG] 标签 ${tab.id} 访问频率:`, metadata.accessCount, '次, 分数:', accessScore);
 
       // 最近访问（找出组内最近访问的标签）
       if (metadata.lastAccess && metadata.lastAccess > mostRecentAccess) {
         mostRecentAccess = metadata.lastAccess;
+        console.log(`[DEBUG] 标签 ${tab.id} 是组内最近访问的标签:`, formatTimeDifference(metadata.lastAccess));
       }
 
       // 停留时间
       const timeScore = Math.min((metadata.totalTime || 0) / (30 * 60 * 1000), 1);
       totalTimeScore += timeScore;
+      console.log(`[DEBUG] 标签 ${tab.id} 停留时间:`, formatTime(metadata.totalTime || 0), '分数:', timeScore);
 
       validTabs++;
+    } else {
+      console.log(`[DEBUG] 标签 ${tab.id} 没有元数据`);
     }
   }
 
   // 如果没有有效的标签元数据，返回默认值
   if (validTabs === 0) {
+    console.log(`[DEBUG] 标签组内没有有效的标签元数据，返回默认行为分数`);
     return {
       finalScore: 0,
       components: {
@@ -323,15 +341,22 @@ export function calculateGroupBehaviorScore(tabs) {
   // 计算平均分数
   const avgAccessScore = totalAccessScore / validTabs;
   const avgTimeScore = totalTimeScore / validTabs;
+  console.log(`[DEBUG] 标签组平均访问频率分数:`, avgAccessScore, '(总分:', totalAccessScore, '/ 有效标签:', validTabs, ')');
+  console.log(`[DEBUG] 标签组平均停留时间分数:`, avgTimeScore, '(总分:', totalTimeScore, '/ 有效标签:', validTabs, ')');
 
   // 计算组的最近访问分数
   const now = Date.now();
   const daysSinceLastAccess = mostRecentAccess > 0 ? (now - mostRecentAccess) / (1000 * 60 * 60 * 24) : 7;
   const recencyScore = Math.max(0, Math.min(1, 1 - (daysSinceLastAccess / 7)));
+  console.log(`[DEBUG] 标签组最近访问:`, mostRecentAccess > 0 ? formatTimeDifference(mostRecentAccess) : '从未', '分数:', recencyScore);
 
   // 加权计算最终分数
+  const finalScore = (avgAccessScore * 0.4) + (recencyScore * 0.4) + (avgTimeScore * 0.2);
+  console.log(`[DEBUG] 标签组行为最终分数:`, finalScore,
+              '= 平均访问频率(', avgAccessScore, '×0.4) + 最近访问(', recencyScore, '×0.4) + 平均停留时间(', avgTimeScore, '×0.2)');
+
   return {
-    finalScore: (avgAccessScore * 0.4) + (recencyScore * 0.4) + (avgTimeScore * 0.2),
+    finalScore,
     components: {
       accessScore: avgAccessScore,
       recencyScore: recencyScore,

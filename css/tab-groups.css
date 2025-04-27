@@ -1,0 +1,160 @@
+/* 标签组和标签的纵向布局样式 */
+.group-list {
+  margin: 15px;
+  max-height: 400px;
+  overflow-y: auto;
+  border-radius: 8px;
+  padding: 0;
+  background-color: white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.sort-controls-header {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 12px 15px;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #e1e1e1;
+}
+
+.sort-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sort-controls::before {
+  content: '排序:';
+  font-size: 13px;
+  color: #555;
+}
+
+.sort-method-selector {
+  padding: 6px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: white;
+  font-size: 13px;
+  color: #333;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.sort-method-selector:hover {
+  border-color: #0078d7;
+}
+
+.sort-order-toggle {
+  padding: 6px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: white;
+  cursor: pointer;
+  font-size: 13px;
+  color: #333;
+  transition: all 0.2s;
+}
+
+.sort-order-toggle:hover {
+  border-color: #0078d7;
+  background-color: #f0f7ff;
+}
+
+.group-item {
+  margin-bottom: 12px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.group-item-header {
+  display: flex;
+  align-items: center;
+  padding: 12px 15px;
+}
+
+.expand-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 5px;
+  margin-right: 8px;
+  font-size: 14px;
+  color: inherit;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+
+.expand-button:hover {
+  opacity: 1;
+}
+
+.group-title {
+  flex: 1;
+  font-weight: 600;
+  font-size: 14px;
+  margin-left: 5px;
+}
+
+.tab-count {
+  background-color: rgba(255,255,255,0.3);
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  margin-left: 10px;
+  font-weight: 500;
+}
+
+.tab-list {
+  background-color: #f8f9fa;
+  max-height: 300px;
+  overflow-y: auto;
+  border-top: 1px solid #eaeaea;
+}
+
+.tab-item {
+  padding: 10px 15px 10px 30px;
+  border-bottom: 1px solid #eaeaea;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.tab-item:hover {
+  background-color: #f0f0f0;
+}
+
+/* 标签项内的图标和标题纵向排列 */
+.tab-item-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.tab-icon-container {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.tab-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+}
+
+.tab-title {
+  font-size: 13px;
+  color: #333;
+  word-break: break-word;
+  max-width: 100%;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.tab-domain {
+  font-size: 11px;
+  color: #666;
+  margin-top: 2px;
+}

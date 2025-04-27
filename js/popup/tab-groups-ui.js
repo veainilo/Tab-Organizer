@@ -191,7 +191,6 @@ async function loadTabGroups(groupListElement, noGroupsElement) {
     // 添加排序控制到标题行
     const sortControls = document.createElement('div');
     sortControls.className = 'sort-controls';
-    sortControls.appendChild(document.createTextNode('排序: '));
     sortControls.appendChild(sortMethodSelector);
     sortControls.appendChild(sortOrderToggle);
 
@@ -203,10 +202,6 @@ async function loadTabGroups(groupListElement, noGroupsElement) {
       const groupItem = document.createElement('div');
       groupItem.className = 'group-item';
       groupItem.dataset.groupId = group.id;
-      groupItem.style.marginBottom = '8px';
-      groupItem.style.borderRadius = '6px';
-      groupItem.style.overflow = 'hidden';
-      groupItem.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
 
       // 创建标签组标题栏
       const groupHeader = document.createElement('div');
@@ -218,12 +213,6 @@ async function loadTabGroups(groupListElement, noGroupsElement) {
       const expandButton = document.createElement('button');
       expandButton.className = 'expand-button';
       expandButton.dataset.groupId = group.id;
-      expandButton.style.background = 'none';
-      expandButton.style.border = 'none';
-      expandButton.style.cursor = 'pointer';
-      expandButton.style.padding = '2px 5px';
-      expandButton.style.marginRight = '5px';
-      expandButton.style.fontSize = '12px';
 
       // 检查是否有保存的展开状态，如果没有则默认为折叠
       const isExpanded = groupExpandStates[group.id] !== undefined ?
@@ -251,10 +240,6 @@ async function loadTabGroups(groupListElement, noGroupsElement) {
       const tabList = document.createElement('div');
       tabList.className = 'tab-list';
       tabList.style.display = isExpanded ? 'block' : 'none';
-      tabList.style.backgroundColor = '#f8f9fa';
-      tabList.style.maxHeight = '300px';
-      tabList.style.overflowY = 'auto';
-      tabList.style.borderTop = '1px solid #eaeaea';
 
       // 获取组内的标签页
       const groupTabs = tabs.filter(tab => tab.groupId === group.id);
@@ -267,11 +252,14 @@ async function loadTabGroups(groupListElement, noGroupsElement) {
         const tabItem = document.createElement('div');
         tabItem.className = 'tab-item';
         tabItem.dataset.tabId = tab.id;
-        tabItem.style.display = 'flex';
-        tabItem.style.alignItems = 'center';
-        tabItem.style.padding = '8px 15px';
-        tabItem.style.borderBottom = '1px solid #eaeaea';
-        tabItem.style.cursor = 'pointer';
+
+        // 创建标签内容容器（用于纵向排列）
+        const tabItemContent = document.createElement('div');
+        tabItemContent.className = 'tab-item-content';
+
+        // 创建图标容器
+        const iconContainer = document.createElement('div');
+        iconContainer.className = 'tab-icon-container';
 
         // 创建标签图标
         const tabIcon = document.createElement('img');
@@ -280,16 +268,39 @@ async function loadTabGroups(groupListElement, noGroupsElement) {
         tabIcon.onerror = () => {
           tabIcon.src = 'icons/icon16.png';
         };
+        iconContainer.appendChild(tabIcon);
 
         // 创建标签标题
-        const tabTitle = document.createElement('span');
+        const tabTitle = document.createElement('div');
         tabTitle.className = 'tab-title';
         tabTitle.textContent = tab.title || 'Unnamed Tab';
         tabTitle.title = tab.title || 'Unnamed Tab';
 
-        // 添加元素到标签项
-        tabItem.appendChild(tabIcon);
-        tabItem.appendChild(tabTitle);
+        // 尝试提取域名并显示
+        let domain = '';
+        try {
+          if (tab.url) {
+            const url = new URL(tab.url);
+            domain = url.hostname;
+          }
+        } catch (e) {
+          console.log('无法解析URL:', tab.url);
+        }
+
+        // 添加元素到标签内容容器
+        tabItemContent.appendChild(iconContainer);
+        tabItemContent.appendChild(tabTitle);
+
+        // 如果有域名，添加域名显示
+        if (domain) {
+          const tabDomain = document.createElement('div');
+          tabDomain.className = 'tab-domain';
+          tabDomain.textContent = domain;
+          tabItemContent.appendChild(tabDomain);
+        }
+
+        // 添加内容容器到标签项
+        tabItem.appendChild(tabItemContent);
 
         // 添加点击事件，激活标签页
         tabItem.addEventListener('click', () => {

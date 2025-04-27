@@ -23,12 +23,17 @@ document.addEventListener('DOMContentLoaded', () => {
   // 获取按钮元素
   const groupByDomainButton = document.getElementById('groupByDomain');
   const ungroupAllButton = document.getElementById('ungroupAll');
-  const sortTabGroupsButton = document.getElementById('sortTabGroups');
+  const sortTabGroupsButton = document.getElementById('sortGroups');
   const sortTabsButton = document.getElementById('sortTabs');
+  const refreshGroupsButton = document.getElementById('refreshGroups');
+  const collapseAllButton = document.getElementById('collapseAll');
+  const expandAllButton = document.getElementById('expandAll');
+  const createGroupButton = document.getElementById('createGroup');
+  const helpButton = document.getElementById('helpButton');
 
-  // 获取标签页切换元素
-  const tabButtons = document.querySelectorAll('.nav-item');
-  const tabContents = document.querySelectorAll('.tab-content');
+  // 获取搜索元素
+  const searchInput = document.getElementById('searchTabs');
+  const searchButton = document.getElementById('searchButton');
 
   // 获取设置元素
   const extensionActiveToggle = document.getElementById('extensionActiveToggle');
@@ -66,21 +71,121 @@ document.addEventListener('DOMContentLoaded', () => {
   loadTabGroups(groupListElement, noGroupsElement);
   loadSortingMetrics(sortingMetricsElement, sortingMetricsContainer);
 
-  // 添加标签页切换事件
-  tabButtons.forEach(button => {
-    button.addEventListener('click', () => {
-      // 移除所有标签页的激活状态
-      tabButtons.forEach(btn => btn.classList.remove('active'));
-      tabContents.forEach(content => content.classList.remove('active'));
+  // 添加刷新标签组按钮事件
+  refreshGroupsButton.addEventListener('click', () => {
+    console.log('刷新标签组按钮被点击');
+    loadTabGroups(groupListElement, noGroupsElement);
+    showStatus('标签组列表已刷新', 'info');
+  });
 
-      // 激活当前标签页
-      button.classList.add('active');
-      const tabId = button.getAttribute('data-tab');
-      const tabContent = document.getElementById(tabId + '-tab');
-      if (tabContent) {
-        tabContent.classList.add('active');
+  // 添加折叠所有标签组按钮事件
+  collapseAllButton.addEventListener('click', () => {
+    console.log('折叠所有标签组按钮被点击');
+    // 获取所有标签组
+    chrome.tabGroups.query({ windowId: WINDOW_ID_CURRENT }, async (groups) => {
+      if (!groups || groups.length === 0) {
+        showStatus('没有标签组可折叠', 'info');
+        return;
+      }
+
+      // 折叠所有标签组
+      for (const group of groups) {
+        await chrome.tabGroups.update(group.id, { collapsed: true });
+      }
+
+      showStatus('所有标签组已折叠', 'info');
+      loadTabGroups(groupListElement, noGroupsElement);
+    });
+  });
+
+  // 添加展开所有标签组按钮事件
+  expandAllButton.addEventListener('click', () => {
+    console.log('展开所有标签组按钮被点击');
+    // 获取所有标签组
+    chrome.tabGroups.query({ windowId: WINDOW_ID_CURRENT }, async (groups) => {
+      if (!groups || groups.length === 0) {
+        showStatus('没有标签组可展开', 'info');
+        return;
+      }
+
+      // 展开所有标签组
+      for (const group of groups) {
+        await chrome.tabGroups.update(group.id, { collapsed: false });
+      }
+
+      showStatus('所有标签组已展开', 'info');
+      loadTabGroups(groupListElement, noGroupsElement);
+    });
+  });
+
+  // 添加创建新标签组按钮事件
+  createGroupButton.addEventListener('click', () => {
+    console.log('创建新标签组按钮被点击');
+    // 获取当前窗口的所有标签页
+    chrome.tabs.query({ currentWindow: true, active: true }, async (tabs) => {
+      if (tabs.length === 0) {
+        showStatus('没有可用的标签页', 'error');
+        return;
+      }
+
+      try {
+        // 创建新的标签组
+        const groupId = await chrome.tabs.group({ tabIds: [tabs[0].id] });
+
+        // 设置组标题和颜色
+        await chrome.tabGroups.update(groupId, {
+          title: '新标签组',
+          color: 'blue'
+        });
+
+        showStatus('新标签组已创建', 'success');
+        loadTabGroups(groupListElement, noGroupsElement);
+      } catch (error) {
+        console.error('创建标签组失败:', error);
+        showStatus('创建标签组失败: ' + error.message, 'error');
       }
     });
+  });
+
+  // 添加搜索功能
+  searchButton.addEventListener('click', () => {
+    const searchTerm = searchInput.value.trim().toLowerCase();
+    if (!searchTerm) {
+      showStatus('请输入搜索关键词', 'info');
+      return;
+    }
+
+    console.log('搜索标签页:', searchTerm);
+
+    // 搜索标签页
+    chrome.tabs.query({ currentWindow: true }, (tabs) => {
+      const matchedTabs = tabs.filter(tab =>
+        tab.title.toLowerCase().includes(searchTerm) ||
+        tab.url.toLowerCase().includes(searchTerm)
+      );
+
+      if (matchedTabs.length === 0) {
+        showStatus('未找到匹配的标签页', 'info');
+        return;
+      }
+
+      // 高亮显示第一个匹配的标签页
+      chrome.tabs.update(matchedTabs[0].id, { active: true });
+
+      showStatus(`找到 ${matchedTabs.length} 个匹配的标签页`, 'success');
+    });
+  });
+
+  // 添加回车键搜索
+  searchInput.addEventListener('keyup', (event) => {
+    if (event.key === 'Enter') {
+      searchButton.click();
+    }
+  });
+
+  // 添加帮助按钮事件
+  helpButton.addEventListener('click', () => {
+    showStatus('标签页组织器帮助: 用于管理和组织浏览器标签页', 'info');
   });
 
   // 添加按域名分组按钮事件

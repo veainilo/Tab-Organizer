@@ -40,10 +40,11 @@ function localizeUI() {
  */
 function showStatus(message, type) {
   const statusElement = document.getElementById('status');
-  if (!statusElement) return;
-  
-  statusElement.textContent = message;
-  statusElement.className = 'status';
+  const statusMessageElement = document.getElementById('statusMessage');
+  if (!statusElement || !statusMessageElement) return;
+
+  statusMessageElement.textContent = message;
+  statusElement.className = 'status-container';
 
   if (type === 'success') {
     statusElement.classList.add('success');
@@ -53,11 +54,11 @@ function showStatus(message, type) {
     statusElement.classList.add('info');
   }
 
-  statusElement.style.display = 'block';
+  statusElement.style.opacity = '1';
 
   // Hide status after 3 seconds
   setTimeout(() => {
-    statusElement.style.display = 'none';
+    statusElement.style.opacity = '0.7';
   }, 3000);
 }
 

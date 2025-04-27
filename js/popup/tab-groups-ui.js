@@ -273,13 +273,73 @@ async function loadTabGroups(groupListElement, noGroupsElement) {
       // 按索引排序
       groupTabs.sort((a, b) => a.index - b.index);
 
+      // 计算标签页的排序分数
+      const tabScores = {};
+
+      // 获取当前标签排序方法和排序顺序
+      let tabSortMethod = 'position'; // 默认按位置排序
+      let tabSortAscending = true; // 默认升序
+
+      try {
+        const statusResponse = await chrome.runtime.sendMessage({ action: 'getExtensionStatus' });
+        if (statusResponse && statusResponse.success && statusResponse.settings) {
+          tabSortMethod = statusResponse.settings.sortingMethod || 'position';
+          tabSortAscending = statusResponse.settings.sortAscending !== false;
+        }
+      } catch (error) {
+        console.error('获取标签排序设置失败:', error);
+      }
+
+      // 计算每个标签的排序分数
+      for (const tab of groupTabs) {
+        let score;
+
+        if (tabSortMethod === 'title') {
+          // 按标题排序
+          score = tab.title || '';
+        } else if (tabSortMethod === 'domain') {
+          // 按域名排序
+          try {
+            if (tab.url) {
+              const url = new URL(tab.url);
+              score = url.hostname;
+            } else {
+              score = '';
+            }
+          } catch (e) {
+            score = '';
+          }
+        } else if (tabSortMethod === 'smart') {
+          // 智能排序（结合多个因素）
+          const urlScore = tab.url ? Math.min(tab.url.length / 100, 1) : 0; // URL长度分数
+          const titleScore = tab.title ? Math.min(tab.title.length / 50, 1) : 0; // 标题长度分数
+          let domainScore = 0;
+          try {
+            if (tab.url) {
+              const url = new URL(tab.url);
+              domainScore = url.hostname.length / 20; // 域名长度分数
+            }
+          } catch (e) {
+            domainScore = 0;
+          }
+
+          // 加权平均
+          score = (urlScore * 0.4) + (titleScore * 0.4) + (domainScore * 0.2);
+        } else {
+          // 默认按索引排序
+          score = tab.index;
+        }
+
+        tabScores[tab.id] = score;
+      }
+
       // 添加标签页到列表
       for (const tab of groupTabs) {
         const tabItem = document.createElement('div');
         tabItem.className = 'tab-item';
         tabItem.dataset.tabId = tab.id;
 
-        // 创建标签内容容器（用于纵向排列）
+        // 创建标签内容容器
         const tabItemContent = document.createElement('div');
         tabItemContent.className = 'tab-item-content';
 
@@ -327,6 +387,24 @@ async function loadTabGroups(groupListElement, noGroupsElement) {
           tabDomain.textContent = domain;
           textContainer.appendChild(tabDomain);
         }
+
+        // 创建标签分数指示器
+        const tabScoreIndicator = document.createElement('div');
+        tabScoreIndicator.className = 'tab-score-indicator';
+
+        // 获取排序分数
+        let scoreText = '';
+        if (tabScores[tab.id] !== undefined) {
+          const score = tabScores[tab.id];
+          if (typeof score === 'number') {
+            scoreText = score.toFixed(2); // 数字格式化为两位小数
+          } else {
+            scoreText = String(score);
+          }
+        }
+
+        tabScoreIndicator.textContent = scoreText;
+        textContainer.appendChild(tabScoreIndicator);
 
         // 添加元素到标签内容容器
         tabItemContent.appendChild(iconContainer);

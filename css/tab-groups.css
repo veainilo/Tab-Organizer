@@ -181,7 +181,7 @@
 }
 
 .tab-item {
-  padding: 6px 10px 6px 24px;
+  padding: 8px 10px 8px 24px;
   border-bottom: 1px solid #eaeaea;
   cursor: pointer;
   transition: all 0.2s;
@@ -194,6 +194,18 @@
 
 .tab-item:last-child {
   border-bottom: none;
+}
+
+.tab-item::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background-color: #ccc;
 }
 
 /* 标签项内的图标和标题水平排列 */
@@ -224,6 +236,7 @@
   flex-direction: column;
   flex: 1;
   overflow: hidden;
+  position: relative;
 }
 
 .tab-title {
@@ -243,5 +256,24 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  opacity: 0.8;
+}
+
+.tab-score-indicator {
+  font-size: 10px;
+  color: #0078d7;
+  background-color: rgba(0, 120, 215, 0.1);
+  border-radius: 8px;
+  padding: 1px 6px;
+  margin-top: 4px;
+  display: inline-block;
+  font-weight: 500;
+  position: relative;
+}
+
+.tab-score-indicator::before {
+  content: "分数: ";
+  font-size: 9px;
+  font-weight: normal;
   opacity: 0.8;
 }

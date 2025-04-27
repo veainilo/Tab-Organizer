@@ -4,6 +4,7 @@
 
 import { WINDOW_ID_CURRENT, TAB_GROUP_ID_NONE } from './utils.js';
 import { settings } from './settings.js';
+import { calculateGroupScore, sortGroupsByScore } from './scoring.js';
 
 /**
  * 对标签组进行排序
@@ -48,19 +49,8 @@ async function sortTabGroups() {
       // 获取组内标签页
       const tabs = await chrome.tabs.query({ groupId: group.id });
 
-      // 计算智能排序分数
-      let score;
-
-      if (settings.groupSortingMethod === 'title') {
-        // 按标题排序
-        score = group.title || '';
-      } else if (settings.groupSortingMethod === 'size') {
-        // 按大小排序
-        score = tabs.length;
-      } else {
-        // 默认使用智能排序（基于标签页数量）
-        score = tabs.length / 10; // 最多10个标签页得满分
-      }
+      // 使用统一的评分函数计算分数
+      const score = calculateGroupScore(group, tabs, settings.groupSortingMethod);
 
       groupInfo[group.id] = {
         group: group,
@@ -71,24 +61,14 @@ async function sortTabGroups() {
       };
     }
 
-    // 根据分数对组进行排序
-    let sortedGroups = [...groups];
-    sortedGroups.sort((a, b) => {
-      const infoA = groupInfo[a.id];
-      const infoB = groupInfo[b.id];
+    // 创建组ID到分数的映射
+    const groupScores = {};
+    for (const group of groups) {
+      groupScores[group.id] = groupInfo[group.id].score;
+    }
 
-      if (settings.groupSortingMethod === 'title') {
-        // 字符串比较
-        return settings.groupSortAscending ?
-          String(infoA.score).localeCompare(String(infoB.score)) :
-          String(infoB.score).localeCompare(String(infoA.score));
-      } else {
-        // 数值比较
-        return settings.groupSortAscending ?
-          infoA.score - infoB.score :
-          infoB.score - infoA.score;
-      }
-    });
+    // 使用统一的排序函数根据分数对组进行排序
+    const sortedGroups = sortGroupsByScore(groups, groupScores, settings.groupSortAscending);
 
     console.log('排序后的标签组:', sortedGroups.map(g => g.title));
 

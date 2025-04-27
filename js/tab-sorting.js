@@ -4,6 +4,7 @@
 
 import { WINDOW_ID_CURRENT, extractDomain } from './utils.js';
 import { settings } from './settings.js';
+import { calculateTabScore, calculateGroupScore, sortTabsByScore } from './scoring.js';
 
 /**
  * 对单个标签组内的标签进行排序
@@ -43,49 +44,14 @@ async function sortTabsInGroup(groupId) {
     // 计算每个标签的排序分数
     const tabScores = {};
     for (const tab of tabs) {
-      let score;
-
-      if (sortMethod === 'title') {
-        // 按标题排序
-        score = tab.title || '';
-      } else if (sortMethod === 'domain') {
-        // 按域名排序
-        score = extractDomain(tab.url || '');
-      } else if (sortMethod === 'smart') {
-        // 智能排序（结合多个因素）
-        // 使用更稳定的计算方法，避免随机性
-        const urlScore = tab.url ? Math.min(tab.url.length / 100, 1) : 0; // URL长度分数
-        const titleScore = tab.title ? Math.min(tab.title.length / 50, 1) : 0; // 标题长度分数
-        const domainScore = tab.url ? extractDomain(tab.url).length / 20 : 0; // 域名长度分数
-
-        // 加权平均
-        score = (urlScore * 0.4) + (titleScore * 0.4) + (domainScore * 0.2);
-      } else {
-        // 默认按索引排序
-        score = tab.index;
-      }
-
+      // 使用统一的评分函数
+      const score = calculateTabScore(tab, sortMethod);
       tabScores[tab.id] = score;
       console.log(`标签 ${tab.id} (${tab.title}) 的排序分数: ${score}`);
     }
 
-    // 根据分数对标签页进行排序
-    const sortedTabs = [...tabs].sort((a, b) => {
-      const scoreA = tabScores[a.id];
-      const scoreB = tabScores[b.id];
-
-      if (typeof scoreA === 'string' && typeof scoreB === 'string') {
-        // 字符串比较
-        return sortAscending ?
-          scoreA.localeCompare(scoreB) :
-          scoreB.localeCompare(scoreA);
-      } else {
-        // 数值比较
-        return sortAscending ?
-          scoreA - scoreB :
-          scoreB - scoreA;
-      }
-    });
+    // 使用统一的排序函数根据分数对标签页进行排序
+    const sortedTabs = sortTabsByScore(tabs, tabScores, sortAscending);
 
     console.log('排序后的标签顺序:');
     sortedTabs.forEach((tab, index) => {
@@ -176,49 +142,19 @@ async function getSortingMetrics() {
       const tabs = await chrome.tabs.query({ groupId: group.id });
       const size = tabs.length;
 
-      // 创建随机的访问时间和创建时间（实际应用中应该使用真实数据）
-      const accessTime = now - Math.random() * 3600000; // 1小时内的随机时间
-      const createTime = now - Math.random() * 86400000; // 1天内的随机时间
+      // 创建固定的访问时间和创建时间（实际应用中应该使用真实数据）
+      // 使用固定值而不是随机值，确保每次计算结果一致
+      const accessTime = now - 1800000; // 30分钟前
+      const createTime = now - 43200000; // 12小时前
 
-      // 计算智能排序的各项分数
-      const accessScore = Math.random(); // 随机分数，实际应用中应基于真实数据
-      const sizeScore = Math.min(size / 10, 1); // 最多10个标签页得满分
-      const createScore = Math.random();
-
-      // 计算最终分数（加权平均）
-      const accessWeight = 0.5;
-      const sizeWeight = 0.3;
-      const createWeight = 0.2;
-      const finalScore = (
-        accessScore * accessWeight +
-        sizeScore * sizeWeight +
-        createScore * createWeight
-      );
+      // 使用统一的评分函数计算组的分数
+      const finalScore = calculateGroupScore(group, tabs, 'smart');
 
       // 计算组内标签的排序指标
       const tabMetrics = {};
       for (const tab of tabs) {
-        let score;
-
-        if (settings.sortingMethod === 'title') {
-          // 按标题排序
-          score = tab.title || '';
-        } else if (settings.sortingMethod === 'domain') {
-          // 按域名排序
-          score = extractDomain(tab.url || '');
-        } else if (settings.sortingMethod === 'smart') {
-          // 智能排序（结合多个因素）
-          // 使用更稳定的计算方法，避免随机性
-          const urlScore = tab.url ? Math.min(tab.url.length / 100, 1) : 0; // URL长度分数
-          const titleScore = tab.title ? Math.min(tab.title.length / 50, 1) : 0; // 标题长度分数
-          const domainScore = tab.url ? extractDomain(tab.url).length / 20 : 0; // 域名长度分数
-
-          // 加权平均
-          score = (urlScore * 0.4) + (titleScore * 0.4) + (domainScore * 0.2);
-        } else {
-          // 默认按索引排序
-          score = tab.index;
-        }
+        // 使用统一的评分函数
+        const score = calculateTabScore(tab, settings.sortingMethod);
 
         tabMetrics[tab.id] = {
           title: tab.title || 'Unnamed Tab',
@@ -229,6 +165,14 @@ async function getSortingMetrics() {
 
         console.log(`标签 ${tab.id} (${tab.title}) 的排序分数: ${score}`);
       }
+
+      // 为了保持向后兼容，保留一些旧的字段
+      const accessScore = 0.5; // 固定值，避免随机性
+      const sizeScore = Math.min(size / 10, 1);
+      const createScore = 0.5; // 固定值，避免随机性
+      const accessWeight = 0.5;
+      const sizeWeight = 0.3;
+      const createWeight = 0.2;
 
       metrics[group.id] = {
         title: group.title || 'Unnamed Group',

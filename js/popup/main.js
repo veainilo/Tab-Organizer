@@ -309,12 +309,40 @@ document.addEventListener('DOMContentLoaded', () => {
 chrome.runtime.onMessage.addListener((message) => {
   console.log('Popup received message:', message);
 
+  // 获取DOM元素
+  const groupListElement = document.getElementById('groupList');
+  const noGroupsElement = document.getElementById('noGroups');
+  const sortingMetricsElement = document.getElementById('sortingMetrics');
+  const sortingMetricsContainer = document.getElementById('sortingMetricsContainer');
+
   // 处理消息
   if (message.action === 'groupByDomainComplete') {
     // 分组完成，重新加载标签组列表
-    const groupListElement = document.getElementById('groupList');
-    const noGroupsElement = document.getElementById('noGroups');
     loadTabGroups(groupListElement, noGroupsElement);
+  }
+  // 处理排序完成消息
+  else if (message.action === 'sortingComplete') {
+    console.log('收到排序完成消息:', message);
+
+    if (message.success) {
+      // 根据排序类型显示不同的消息
+      if (message.type === 'groups') {
+        showStatus('标签组排序完成', 'success');
+      } else if (message.type === 'tabs') {
+        showStatus('标签页排序完成', 'success');
+      }
+
+      // 重新加载标签组列表和排序指标
+      loadTabGroups(groupListElement, noGroupsElement);
+      loadSortingMetrics(sortingMetricsElement, sortingMetricsContainer);
+    } else {
+      // 显示排序失败消息
+      if (message.type === 'groups') {
+        showStatus('标签组排序失败', 'error');
+      } else if (message.type === 'tabs') {
+        showStatus('标签页排序失败', 'error');
+      }
+    }
   }
 
   // 返回 true 表示异步处理

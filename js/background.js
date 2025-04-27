@@ -15,13 +15,13 @@ console.log('Edge Tab Organizer - Background Service Worker 已启动');
 // 加载设置
 loadSettings().then(() => {
   console.log('设置加载完成，初始化监控状态');
-  
+
   // 监听存储变化
   chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === 'sync' && changes.tabOrganizerSettings) {
       const oldSettings = settings;
       Object.assign(settings, changes.tabOrganizerSettings.newValue);
-  
+
       // 检查是否需要更新监控状态
       const monitoringSettingsChanged =
         oldSettings.monitoringEnabled !== settings.monitoringEnabled ||
@@ -29,14 +29,14 @@ loadSettings().then(() => {
         oldSettings.continuousMonitoring !== settings.continuousMonitoring ||
         oldSettings.autoGroupInterval !== settings.autoGroupInterval ||
         oldSettings.autoSortInterval !== settings.autoSortInterval;
-  
+
       if (monitoringSettingsChanged) {
         console.log('监控设置已更改，更新监控状态');
         updateMonitoringStatus();
       }
     }
   });
-  
+
   // 初始化监控状态
   updateMonitoringStatus();
 });
@@ -279,6 +279,16 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     console.log('处理 sortTabGroups 消息');
     sortTabGroups().then(success => {
       console.log('sortTabGroups 执行结果:', success);
+
+      // 发送完成消息，通知popup刷新
+      chrome.runtime.sendMessage({
+        action: 'sortingComplete',
+        type: 'groups',
+        success: success
+      }).catch(err => {
+        console.error('发送排序完成消息失败:', err);
+      });
+
       sendResponse({ success });
     }).catch(error => {
       console.error('Error in sortTabGroups:', error);
@@ -298,6 +308,17 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
     sortTabsInGroup(message.groupId).then(success => {
       console.log('sortTabsInGroup 执行结果:', success);
+
+      // 发送完成消息，通知popup刷新
+      chrome.runtime.sendMessage({
+        action: 'sortingComplete',
+        type: 'tabs',
+        groupId: message.groupId,
+        success: success
+      }).catch(err => {
+        console.error('发送排序完成消息失败:', err);
+      });
+
       sendResponse({ success });
     }).catch(error => {
       console.error('Error in sortTabsInGroup:', error);
@@ -401,10 +422,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       if (message.target === 'tabs') {
         settings.sortingMethod = message.method;
         console.log('标签排序方法已更新为:', settings.sortingMethod);
-        
+
         // 保存设置
         saveSettings();
-        
+
         // 如果更新了排序方法，自动执行一次标签排序
         if (settings.extensionActive && settings.enableTabSorting) {
           // 获取所有标签组
@@ -413,6 +434,16 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
             for (const group of groups) {
               sortTabsInGroup(group.id).then(success => {
                 console.log(`标签组 ${group.id} 内的标签排序结果:`, success ? '成功' : '失败');
+
+                // 发送完成消息，通知popup刷新
+                chrome.runtime.sendMessage({
+                  action: 'sortingComplete',
+                  type: 'tabs',
+                  groupId: group.id,
+                  success: success
+                }).catch(err => {
+                  console.error('发送排序完成消息失败:', err);
+                });
               }).catch(error => {
                 console.error(`标签组 ${group.id} 内的标签排序失败:`, error);
               });
@@ -425,14 +456,23 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         // 默认更新标签组排序方法
         settings.groupSortingMethod = message.method;
         console.log('标签组排序方法已更新为:', settings.groupSortingMethod);
-        
+
         // 保存设置
         saveSettings();
-        
+
         // 如果更新了排序方法，自动执行一次排序
         if (settings.extensionActive && settings.enableGroupSorting) {
-          sortTabGroups().then(() => {
+          sortTabGroups().then(success => {
             console.log('排序方法已更新，已重新排序标签组');
+
+            // 发送完成消息，通知popup刷新
+            chrome.runtime.sendMessage({
+              action: 'sortingComplete',
+              type: 'groups',
+              success: success
+            }).catch(err => {
+              console.error('发送排序完成消息失败:', err);
+            });
           }).catch(error => {
             console.error('排序标签组失败:', error);
           });
@@ -456,10 +496,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       // 切换标签排序顺序
       settings.sortAscending = !settings.sortAscending;
       console.log('标签排序顺序已切换为:', settings.sortAscending ? '升序' : '降序');
-      
+
       // 保存设置
       saveSettings();
-      
+
       // 如果切换了排序顺序，自动执行一次标签排序
       if (settings.extensionActive && settings.enableTabSorting) {
         // 获取所有标签组
@@ -468,6 +508,16 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           for (const group of groups) {
             sortTabsInGroup(group.id).then(success => {
               console.log(`标签组 ${group.id} 内的标签排序结果:`, success ? '成功' : '失败');
+
+              // 发送完成消息，通知popup刷新
+              chrome.runtime.sendMessage({
+                action: 'sortingComplete',
+                type: 'tabs',
+                groupId: group.id,
+                success: success
+              }).catch(err => {
+                console.error('发送排序完成消息失败:', err);
+              });
             }).catch(error => {
               console.error(`标签组 ${group.id} 内的标签排序失败:`, error);
             });
@@ -476,7 +526,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           console.error('获取标签组失败:', error);
         });
       }
-      
+
       sendResponse({
         success: true,
         settings: settings,
@@ -487,19 +537,28 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       // 切换标签组排序顺序
       settings.groupSortAscending = !settings.groupSortAscending;
       console.log('标签组排序顺序已切换为:', settings.groupSortAscending ? '升序' : '降序');
-      
+
       // 保存设置
       saveSettings();
-      
+
       // 如果切换了排序顺序，自动执行一次排序
       if (settings.extensionActive && settings.enableGroupSorting) {
-        sortTabGroups().then(() => {
+        sortTabGroups().then(success => {
           console.log('排序顺序已切换，已重新排序标签组');
+
+          // 发送完成消息，通知popup刷新
+          chrome.runtime.sendMessage({
+            action: 'sortingComplete',
+            type: 'groups',
+            success: success
+          }).catch(err => {
+            console.error('发送排序完成消息失败:', err);
+          });
         }).catch(error => {
           console.error('排序标签组失败:', error);
         });
       }
-      
+
       sendResponse({
         success: true,
         settings: settings,
@@ -507,7 +566,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         target: 'groups'
       });
     }
-    
+
     return true;
   }
 

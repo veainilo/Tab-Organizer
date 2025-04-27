@@ -3,6 +3,7 @@
  */
 
 import { TAB_GROUP_ID_NONE, WINDOW_ID_CURRENT, showErrorInContainer, getGroupColorBackground, getGroupColorText } from './utils.js';
+import { calculateTabScore, calculateGroupScore, sortTabsByScore, sortGroupsByScore } from '../scoring.js';
 
 // 保存标签组展开状态的对象
 const groupExpandStates = {};
@@ -121,28 +122,17 @@ async function loadTabGroups(groupListElement, noGroupsElement) {
         } else if (currentSortMethod === 'smart') {
           score = metrics.finalScore || 0;
         }
+      } else {
+        // 如果没有指标数据，使用统一的评分函数计算
+        const groupTabs = tabs.filter(tab => tab.groupId === group.id);
+        score = calculateGroupScore(group, groupTabs, currentSortMethod);
       }
 
       groupScores[group.id] = score;
     }
 
-    // 根据分数对组进行排序
-    const sortedGroups = [...groups].sort((a, b) => {
-      const scoreA = groupScores[a.id];
-      const scoreB = groupScores[b.id];
-
-      if (typeof scoreA === 'string' && typeof scoreB === 'string') {
-        // 字符串比较
-        return sortAscending ?
-          scoreA.localeCompare(scoreB) :
-          scoreB.localeCompare(scoreA);
-      } else {
-        // 数值比较
-        return sortAscending ?
-          scoreA - scoreB :
-          scoreB - scoreA;
-      }
-    });
+    // 使用统一的排序函数根据分数对组进行排序
+    const sortedGroups = sortGroupsByScore(groups, groupScores, sortAscending);
 
     // 添加标题行，显示排序顺序和排序控制
     const headerRow = document.createElement('div');
@@ -270,12 +260,6 @@ async function loadTabGroups(groupListElement, noGroupsElement) {
       // 获取组内的标签页
       const groupTabs = tabs.filter(tab => tab.groupId === group.id);
 
-      // 按索引排序
-      groupTabs.sort((a, b) => a.index - b.index);
-
-      // 计算标签页的排序分数
-      const tabScores = {};
-
       // 获取当前标签排序方法和排序顺序
       let tabSortMethod = 'position'; // 默认按位置排序
       let tabSortAscending = true; // 默认升序
@@ -290,51 +274,23 @@ async function loadTabGroups(groupListElement, noGroupsElement) {
         console.error('获取标签排序设置失败:', error);
       }
 
-      // 计算每个标签的排序分数
+      // 计算标签页的排序分数
+      const tabScores = {};
       for (const tab of groupTabs) {
-        let score;
-
-        if (tabSortMethod === 'title') {
-          // 按标题排序
-          score = tab.title || '';
-        } else if (tabSortMethod === 'domain') {
-          // 按域名排序
-          try {
-            if (tab.url) {
-              const url = new URL(tab.url);
-              score = url.hostname;
-            } else {
-              score = '';
-            }
-          } catch (e) {
-            score = '';
-          }
-        } else if (tabSortMethod === 'smart') {
-          // 智能排序（结合多个因素）
-          const urlScore = tab.url ? Math.min(tab.url.length / 100, 1) : 0; // URL长度分数
-          const titleScore = tab.title ? Math.min(tab.title.length / 50, 1) : 0; // 标题长度分数
-          let domainScore = 0;
-          try {
-            if (tab.url) {
-              const url = new URL(tab.url);
-              domainScore = url.hostname.length / 20; // 域名长度分数
-            }
-          } catch (e) {
-            domainScore = 0;
-          }
-
-          // 加权平均
-          score = (urlScore * 0.4) + (titleScore * 0.4) + (domainScore * 0.2);
-        } else {
-          // 默认按索引排序
-          score = tab.index;
-        }
-
+        // 使用统一的评分函数
+        const score = calculateTabScore(tab, tabSortMethod);
         tabScores[tab.id] = score;
       }
 
+      // 使用统一的排序函数对标签进行排序
+      // 这样在popup中显示的顺序将与实际排序顺序一致
+      const sortedGroupTabs = sortTabsByScore(groupTabs, tabScores, tabSortAscending);
+
+      // 使用排序后的标签列表，而不是按索引排序的列表
+      const displayTabs = sortedGroupTabs;
+
       // 添加标签页到列表
-      for (const tab of groupTabs) {
+      for (const tab of displayTabs) {
         const tabItem = document.createElement('div');
         tabItem.className = 'tab-item';
         tabItem.dataset.tabId = tab.id;

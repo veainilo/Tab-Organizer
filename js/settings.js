@@ -24,7 +24,11 @@ let settings = {
   continuousMonitoring: true,     // 持续监控标签状态
   autoGroupInterval: 5000,        // 自动监控间隔（毫秒）
   autoSortInterval: 10000,        // 自动排序间隔（毫秒）
-  monitoringEnabled: true         // 是否启用监控
+  monitoringEnabled: true,        // 是否启用监控
+  // 去重设置
+  autoDeduplicate: false,         // 是否自动去重
+  deduplicateInterval: 30000,     // 自动去重间隔（毫秒）
+  deduplicateOnGrouping: false    // 分组时是否自动去重
 };
 
 /**

@@ -8,6 +8,7 @@ import { isManualUngrouping } from './tab-grouping.js';
 import { groupTabsByDomain } from './tab-grouping.js';
 import { sortTabsInGroup } from './tab-sorting.js';
 import { sortTabGroups } from './group-sorting.js';
+import { deduplicateTabs } from './tab-deduplication.js';
 
 // 定时器ID和下一次执行时间
 let autoGroupTimerId = null; // 用于自动监控的定时器ID
@@ -33,10 +34,26 @@ async function executeMonitoringTask() {
   }
 
   try {
-    // 1. 首先对标签进行分组
+    // 0. 如果启用了自动去重，先执行去重操作
+    if (settings.autoDeduplicate) {
+      console.log('执行自动去重');
+      const deduplicateResult = await deduplicateTabs(true);
+      console.log('自动去重结果:', deduplicateResult);
+    } else {
+      console.log('自动去重未启用，跳过去重步骤');
+    }
+
+    // 1. 然后对标签进行分组
     if (settings.autoGroupByDomain) {
       console.log('执行自动分组');
       await groupTabsByDomain();
+
+      // 如果启用了分组时去重，在分组后执行去重
+      if (settings.deduplicateOnGrouping && !settings.autoDeduplicate) {
+        console.log('分组后执行去重');
+        const deduplicateResult = await deduplicateTabs(true);
+        console.log('分组后去重结果:', deduplicateResult);
+      }
     } else {
       console.log('自动分组未启用，跳过分组步骤');
     }
@@ -143,7 +160,10 @@ function updateMonitoringStatus() {
     autoGroupInterval: settings.autoGroupInterval,
     autoGroupByDomain: settings.autoGroupByDomain,
     enableGroupSorting: settings.enableGroupSorting,
-    enableTabSorting: settings.enableTabSorting
+    enableTabSorting: settings.enableTabSorting,
+    autoDeduplicate: settings.autoDeduplicate,
+    deduplicateInterval: settings.deduplicateInterval,
+    deduplicateOnGrouping: settings.deduplicateOnGrouping
   });
 
   // 无论如何先停止现有的监控

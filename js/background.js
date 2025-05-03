@@ -9,6 +9,7 @@ import { sortTabsInGroup, getSortingMetrics } from './tab-sorting.js';
 import { sortTabGroups } from './group-sorting.js';
 import { executeMonitoringTask, updateMonitoringStatus, getNextExecutionTime } from './monitoring.js';
 import { initBehaviorTracking } from './tab-behavior.js';
+import { deduplicateTabs, closeTabs } from './tab-deduplication.js';
 
 // 初始化 service worker
 console.log('Edge Tab Organizer - Background Service Worker 已启动');
@@ -612,6 +613,71 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       extensionActive: settings.extensionActive,
       autoGroupInterval: settings.autoGroupInterval
     });
+    return true;
+  }
+
+  // 查找重复标签页
+  if (message.action === 'findDuplicateTabs') {
+    console.log('处理 findDuplicateTabs 消息');
+
+    deduplicateTabs(false).then(result => {
+      console.log('查找重复标签页结果:', result);
+      sendResponse(result);
+    }).catch(error => {
+      console.error('查找重复标签页失败:', error);
+      sendResponse({
+        success: false,
+        message: `查找重复标签页失败: ${error.message}`,
+        error: error.message
+      });
+    });
+
+    return true;
+  }
+
+  // 自动关闭重复标签页
+  if (message.action === 'autoCloseDuplicateTabs') {
+    console.log('处理 autoCloseDuplicateTabs 消息');
+
+    deduplicateTabs(true).then(result => {
+      console.log('自动关闭重复标签页结果:', result);
+      sendResponse(result);
+    }).catch(error => {
+      console.error('自动关闭重复标签页失败:', error);
+      sendResponse({
+        success: false,
+        message: `自动关闭重复标签页失败: ${error.message}`,
+        error: error.message
+      });
+    });
+
+    return true;
+  }
+
+  // 关闭指定的标签页
+  if (message.action === 'closeTabs') {
+    console.log('处理 closeTabs 消息');
+
+    if (!message.tabIds || !Array.isArray(message.tabIds)) {
+      sendResponse({
+        success: false,
+        message: '缺少有效的标签页ID数组'
+      });
+      return true;
+    }
+
+    closeTabs(message.tabIds).then(result => {
+      console.log('关闭标签页结果:', result);
+      sendResponse(result);
+    }).catch(error => {
+      console.error('关闭标签页失败:', error);
+      sendResponse({
+        success: false,
+        message: `关闭标签页失败: ${error.message}`,
+        error: error.message
+      });
+    });
+
     return true;
   }
 

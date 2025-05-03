@@ -29,6 +29,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const collapseAllButton = document.getElementById('collapseAll');
   const expandAllButton = document.getElementById('expandAll');
   const createGroupButton = document.getElementById('createGroup');
+  const findDuplicatesButton = document.getElementById('findDuplicates');
+  const autoCloseDuplicatesButton = document.getElementById('autoCloseDuplicates');
   const helpButton = document.getElementById('helpButton');
 
   // 获取搜索元素
@@ -293,6 +295,58 @@ document.addEventListener('DOMContentLoaded', () => {
       } catch (error) {
         console.error('排序标签页失败:', error);
         showStatus(getMessage('errorSortingTabs', [error.message || 'Unknown error']), 'error');
+      }
+    });
+  });
+
+  // 添加查找重复标签按钮事件
+  findDuplicatesButton.addEventListener('click', () => {
+    console.log('查找重复标签按钮被点击');
+    showStatus('正在查找重复标签页...', 'info');
+
+    chrome.runtime.sendMessage({ action: 'findDuplicateTabs' }, (response) => {
+      console.log('findDuplicateTabs 响应:', response);
+
+      if (response && response.success) {
+        if (response.duplicates && response.duplicates.length > 0) {
+          // 构建重复标签页的信息
+          let message = `找到 ${response.duplicates.length} 个重复的URL，共 ${response.duplicates.reduce((sum, group) => sum + group.closeTabs.length, 0)} 个可关闭的标签页`;
+          showStatus(message, 'success');
+
+          // 显示详细信息
+          console.log('重复标签页详情:', response.duplicates);
+
+          // 这里可以添加更详细的UI显示，例如弹出一个对话框显示重复标签页的详细信息
+          // 暂时先在控制台输出详细信息
+        } else {
+          showStatus('没有找到重复的标签页', 'info');
+        }
+      } else {
+        showStatus(`查找重复标签页失败: ${response ? response.error : '未知错误'}`, 'error');
+      }
+    });
+  });
+
+  // 添加自动关闭重复标签按钮事件
+  autoCloseDuplicatesButton.addEventListener('click', () => {
+    console.log('自动关闭重复标签按钮被点击');
+    showStatus('正在关闭重复标签页...', 'info');
+
+    chrome.runtime.sendMessage({ action: 'autoCloseDuplicateTabs' }, (response) => {
+      console.log('autoCloseDuplicateTabs 响应:', response);
+
+      if (response && response.success) {
+        if (response.duplicates && response.duplicates.length > 0) {
+          const closedCount = response.duplicates.reduce((sum, group) => sum + group.closeTabs.length, 0);
+          showStatus(`成功关闭 ${closedCount} 个重复标签页`, 'success');
+
+          // 重新加载标签组列表
+          loadTabGroups(groupListElement, noGroupsElement);
+        } else {
+          showStatus('没有找到重复的标签页', 'info');
+        }
+      } else {
+        showStatus(`关闭重复标签页失败: ${response ? response.error : '未知错误'}`, 'error');
       }
     });
   });
